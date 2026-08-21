@@ -95,8 +95,8 @@
             <div class="flex items-center gap-1.5">
               <span>Engine Mode:</span>
               <select id="sim-engine-select" class="px-2.5 py-1 rounded border border-input bg-background text-foreground text-xs focus:outline-none cursor-pointer">
-                <option value="cloud" selected>🚀 Cloud — Real Icarus Verilog 12.0 (design.sv + testbench.sv)</option>
-                <option value="builtin">⚡ Quick Practice (Offline In-Browser Engine)</option>
+                <option value="builtin" selected>⚡ ChipSphere Engine (Instant In-Browser)</option>
+                <option value="cloud">🌐 Native Icarus Verilog 12.0 (JDoodle Cloud)</option>
               </select>
             </div>
             <div class="flex items-center gap-1.5">
@@ -163,32 +163,39 @@
 
             </div>
 
-            <!-- Bottom Console Output Window -->
-            <div class="space-y-2">
-              <div class="flex items-center justify-between px-2">
-                <span class="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-                  Compiler &amp; Simulation Log Output Console
-                </span>
-                <span id="sim-status" class="text-xs font-medium text-emerald-500">Ready to simulate</span>
-              </div>
+            <!-- Bottom Output Section: Dual Results (ChipSphere In-Browser Console + JDoodle Cloud Option) -->
+            <div class="space-y-4 pt-2">
 
-              <div id="console-output" class="console-pane">[ChipSphere Playground] Ready.<br/>Write your <strong>design.sv</strong> (left) and <strong>testbench.sv</strong> (right), then click <strong>▶ Run Simulation</strong>.</div>
-            </div>
-
-            <!-- Merged Code Panel (shown in cloud mode after Run Simulation) -->
-            <div id="merged-code-panel" class="hidden space-y-3">
-              <div class="flex items-center justify-between flex-wrap gap-2">
-                <span class="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5" style="color: var(--foreground);">
-                  📋 Merged Code — design.sv + testbench.sv (Copy &amp; Paste into JDoodle)
-                </span>
-                <div class="flex items-center gap-2">
-                  <button id="copy-merged-btn" onclick="copyMergedCode()" style="background-color: #059669; color: #ffffff !important; font-weight: 700; font-size: 12px; padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: background-color 0.2s;">📋 Copy All Code</button>
-                  <button onclick="window.open('https://www.jdoodle.com/execute-verilog-online/','_blank')" style="background-color: #2563eb; color: #ffffff !important; font-weight: 700; font-size: 12px; padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: background-color 0.2s;">🌐 Open JDoodle</button>
+              <!-- 1. ChipSphere In-Browser Simulation Console -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between px-2">
+                  <span class="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                    ChipSphere In-Browser Compiler &amp; Simulation Console
+                  </span>
+                  <span id="sim-status" class="text-xs font-medium text-emerald-500">Ready to simulate</span>
                 </div>
+
+                <div id="console-output" class="console-pane">[ChipSphere Playground Engine] Ready.<br/>Write your <strong>design.sv</strong> (left) and <strong>testbench.sv</strong> (right), then click <strong>▶ Run Simulation</strong> to see immediate results below...</div>
               </div>
-              <p class="text-xs text-amber-500 font-medium">⚠️ Step 1: Click <strong style="color: #d97706;">📋 Copy All Code</strong> above. Step 2: Click <strong style="color: #2563eb;">🌐 Open JDoodle</strong>. Step 3: Select all text in JDoodle editor (Ctrl+A) and paste (Ctrl+V). Step 4: Click orange <strong>Execute ▶</strong> button.</p>
-              <textarea id="merged-code-textarea" readonly style="width:100%;height:280px;background:#090d16;color:#38bdf8;font-family:'Fira Code', 'Courier New', monospace;font-size:12px;line-height:1.5;padding:12px;border-radius:0.5rem;border:1px solid #334155;resize:vertical;outline:none;box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);"></textarea>
+
+              <!-- 2. Real Icarus Verilog 12.0 JDoodle Cloud Panel (Shown for high-accuracy/SystemVerilog) -->
+              <div id="merged-code-panel" class="space-y-3 p-4 bg-card border border-border rounded-lg shadow-sm mt-4">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                  <div class="flex items-center space-x-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5" style="color: var(--foreground);">
+                      🚀 Need 100% IEEE/SystemVerilog Accuracy? Run on Native Icarus Verilog 12.0
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button id="copy-merged-btn" onclick="copyMergedCode()" style="background-color: #059669; color: #ffffff !important; font-weight: 700; font-size: 12px; padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: background-color 0.2s;">📋 Copy All Code</button>
+                    <button onclick="window.open('https://www.jdoodle.com/execute-verilog-online/','_blank')" style="background-color: #2563eb; color: #ffffff !important; font-weight: 700; font-size: 12px; padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: background-color 0.2s;">🌐 Open in JDoodle Cloud</button>
+                  </div>
+                </div>
+                <p class="text-xs text-amber-500 font-medium">💡 Your <strong>design.sv</strong> + <strong>testbench.sv</strong> are merged below. Click <strong>📋 Copy All Code</strong> → Click <strong>🌐 Open in JDoodle Cloud</strong> → Paste (Ctrl+V) &amp; click Execute ▶ for native compiler results.</p>
+                <textarea id="merged-code-textarea" readonly style="width:100%;height:220px;background:#090d16;color:#38bdf8;font-family:'Fira Code', 'Courier New', monospace;font-size:12px;line-height:1.5;padding:12px;border-radius:0.5rem;border:1px solid #334155;resize:vertical;outline:none;box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);"></textarea>
+              </div>
+
             </div>
           </div>
 
@@ -871,42 +878,30 @@ endmodule`
 
       if (runSimBtn) {
         runSimBtn.addEventListener('click', function() {
-          const engineMode = simEngineSelect ? simEngineSelect.value : 'cloud';
+          const designCode = designEditor.getValue();
+          const tbCode = testbenchEditor.getValue();
+          const merged = designCode + '\n\n// ======= TESTBENCH =======\n' + tbCode;
 
+          // 1. Always update the bottom JDoodle Merged Code Panel
+          window._mergedVerilogCode = merged;
+          const mergedTextarea = document.getElementById('merged-code-textarea');
+          if (mergedTextarea) mergedTextarea.value = merged;
+
+          const engineMode = simEngineSelect ? simEngineSelect.value : 'builtin';
+
+          // If Cloud Mode chosen in dropdown, copy merged code & notify user
           if (engineMode === 'cloud') {
-            const designCode = designEditor.getValue();
-            const tbCode = testbenchEditor.getValue();
-            const merged = designCode + '\n\n// ======= TESTBENCH =======\n' + tbCode;
-
-            // Store merged code globally for the copy button
-            window._mergedVerilogCode = merged;
-
-            // Populate the textarea
-            const mergedPanel = document.getElementById('merged-code-panel');
-            const mergedTextarea = document.getElementById('merged-code-textarea');
-            if (mergedTextarea) mergedTextarea.value = merged;
-            if (mergedPanel) mergedPanel.classList.remove('hidden');
-
-            // Auto-copy to clipboard
             if (navigator.clipboard) {
               navigator.clipboard.writeText(merged).catch(() => {});
             }
-
-            simStatus.textContent = '✅ Code Ready — Copy & Paste in JDoodle';
-            simStatus.className = 'text-xs font-medium text-emerald-500';
-            consoleOutput.innerHTML = `<span style="color:#34d399;font-weight:bold">[Cloud Mode] design.sv + testbench.sv merged (${merged.split('\n').length} lines) ✅</span><br/><span style="color:#38bdf8">Code copied to clipboard. See the merged code panel below — copy it and paste into JDoodle to run with real iverilog 12.0.</span>`;
-            return;
           }
 
-          // QUICK PRACTICE (BUILTIN) MODE: JS AST engine
+          // 2. Always run ChipSphere In-Browser Engine for instant on-site results
           simStatus.textContent = 'Compiling...';
           simStatus.className = 'text-xs font-medium text-amber-500';
-          consoleOutput.innerHTML = `<span style="color:#f59e0b">[Compiling Verilog RTL &amp; Testbench...]</span><br/>Parsing AST syntax nodes...`;
+          consoleOutput.innerHTML = `<span style="color:#f59e0b">[ChipSphere Practice Engine — Compiling Verilog...]</span><br/>Parsing AST syntax nodes &amp; signal connections...`;
 
           setTimeout(function() {
-            const designCode = designEditor.getValue();
-            const tbCode = testbenchEditor.getValue();
-
             const result = compileAndSimulateVerilog(designCode, tbCode);
 
             if (!result.success) {
@@ -915,25 +910,26 @@ endmodule`
               let errLog = `<span style="color: #ef4444; font-weight: bold;">[COMPILATION ERROR DETECTED — ${result.errors.length} ERROR(S)]</span><br/>`;
               errLog += `------------------------------------------------------------<br/>`;
               errLog += result.errors.map(err => `<span style="color: #f87171; font-weight: bold;">${err}</span>`).join('<br/>') + `<br/><br/>`;
-              errLog += `<span style="color: #94a3b8;">Monaco Editor has flagged the exact line(s) with red wavy indicators.</span>`;
+              errLog += `<span style="color: #94a3b8;">Monaco Editor has flagged line errors with red squiggly lines.</span><br/>`;
+              errLog += `<span style="color: #38bdf8;">For full IEEE compiler error trace, use the JDoodle Cloud panel below.</span>`;
               consoleOutput.innerHTML = errLog;
               return;
             }
 
-            let logText = `<span style="color: #34d399; font-weight: bold;">[Quick Practice Engine — Compilation Successful]</span><br/><br/><span style="color: #38bdf8; font-weight: bold;">=== Simulation Output ===</span><br/>`;
+            let logText = `<span style="color: #34d399; font-weight: bold;">[ChipSphere Practice Engine — Simulation Successful]</span><br/><br/><span style="color: #38bdf8; font-weight: bold;">=== Simulation Output ===</span><br/>`;
             if (result.logs.length > 0) {
               logText += result.logs.join('<br/>') + '<br/>';
             } else {
-              logText += `Simulation completed.<br/>`;
+              logText += `Time=0 | Simulation completed.<br/>`;
             }
             const modMatch = designCode.match(/module\s+(\w+)/);
             const modName = modMatch ? modMatch[1] : 'user_module';
-            logText += `<br/><span style="color: #34d399; font-weight: bold;">=== Simulation of '${modName}' Finished ===</span>`;
+            logText += `<br/><span style="color: #34d399; font-weight: bold;">=== Simulation of '${modName}' Finished (0 Errors) ===</span>`;
 
             consoleOutput.innerHTML = logText;
             simStatus.textContent = 'Simulation Finished';
             simStatus.className = 'text-xs font-medium text-emerald-500';
-          }, 350);
+          }, 300);
         });
       }
     });
