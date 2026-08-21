@@ -95,8 +95,8 @@
             <div class="flex items-center gap-1.5">
               <span>Engine Mode:</span>
               <select id="sim-engine-select" class="px-2.5 py-1 rounded border border-input bg-background text-foreground text-xs focus:outline-none cursor-pointer">
-                <option value="builtin">⚡ ChipSphere Verilog AST Engine (Instant In-Browser)</option>
-                <option value="edaplayground">🌐 Full EDA Playground Cloud Engine (ModelSim / VCS)</option>
+                <option value="jdoodle" selected>🚀 Icarus Verilog 12.0 Cloud (Production — Real iverilog)</option>
+                <option value="builtin">⚡ Quick Practice (Offline In-Browser Engine)</option>
               </select>
             </div>
             <div class="flex items-center gap-1.5">
@@ -124,12 +124,49 @@
         </div>
       </section>
 
-      <!-- EDA Playground Workspace Grid (Strict Side by Side Editors) -->
+      <!-- EDA Playground Workspace Grid -->
       <section class="py-6 px-4 sm:px-6 lg:px-8 bg-background">
         <div class="max-w-7xl mx-auto space-y-6">
 
-          <!-- IDE Main View -->
-          <div id="builtin-ide-view" class="space-y-6">
+          <!-- PRIMARY VIEW: JDoodle Native Icarus Verilog Cloud Engine -->
+          <div id="jdoodle-cloud-view" class="space-y-4">
+
+            <!-- Info Banner -->
+            <div class="flex items-center justify-between p-3 bg-card border border-border rounded-md">
+              <div class="flex items-center space-x-2">
+                <span class="text-sm font-semibold text-foreground">🚀 Production-Grade Icarus Verilog 12.0 Cloud Compiler</span>
+                <span class="text-xs text-muted-foreground">(Real native iverilog + vvp execution — identical to your local terminal)</span>
+              </div>
+              <div class="flex items-center space-x-3">
+                <a href="https://www.edaplayground.com" target="_blank" class="text-xs text-primary hover:underline font-semibold">Also try EDAPlayground.com ↗</a>
+              </div>
+            </div>
+
+            <!-- JDoodle Verilog IDE Iframe -->
+            <iframe id="jdoodle-iframe" src="https://www.jdoodle.com/execute-verilog-online/" style="width: 100%; height: 680px; border: 1px solid var(--border, #e2e8f0); border-radius: 0.5rem; overflow: hidden;" loading="lazy" allow="clipboard-write"></iframe>
+
+            <!-- Capabilities Info -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="p-3 bg-card border border-border rounded-md text-center">
+                <span class="text-lg">✅</span>
+                <p class="text-xs font-semibold text-foreground mt-1">Full IEEE 1364/1800 Compliance</p>
+                <p class="text-[10px] text-muted-foreground">Supports all Verilog & SystemVerilog syntax</p>
+              </div>
+              <div class="p-3 bg-card border border-border rounded-md text-center">
+                <span class="text-lg">🛑</span>
+                <p class="text-xs font-semibold text-foreground mt-1">Real Error Reporting</p>
+                <p class="text-[10px] text-muted-foreground">Exact compiler errors with line numbers from iverilog</p>
+              </div>
+              <div class="p-3 bg-card border border-border rounded-md text-center">
+                <span class="text-lg">⚡</span>
+                <p class="text-xs font-semibold text-foreground mt-1">$display, $monitor, $finish</p>
+                <p class="text-[10px] text-muted-foreground">All system tasks work exactly like your local simulation</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECONDARY VIEW: Quick Practice In-Browser JS Engine -->
+          <div id="builtin-ide-view" class="hidden space-y-6">
 
             <!-- Side by Side Monaco Editors (design.sv left, testbench.sv right) -->
             <div class="eda-side-by-side-grid">
@@ -170,21 +207,9 @@
                 <span id="sim-status" class="text-xs font-medium text-emerald-500">Ready to simulate</span>
               </div>
 
-              <div id="console-output" class="console-pane">[Icarus Verilog Simulation Engine v12.0] Ready.<br/>Modify <strong>design.sv</strong> or <strong>testbench.sv</strong> above and click <strong>▶ Run Simulation</strong> to execute...</div>
+              <div id="console-output" class="console-pane">[Quick Practice Engine] Ready.<br/>Modify <strong>design.sv</strong> or <strong>testbench.sv</strong> above and click <strong>▶ Run Simulation</strong> to execute...</div>
             </div>
 
-          </div>
-
-          <!-- Embedded EDA Playground Container -->
-          <div id="edaplayground-embed-view" class="hidden space-y-4">
-            <div class="flex items-center justify-between p-3 bg-card border border-border rounded-md">
-              <div class="flex items-center space-x-2">
-                <span class="text-sm font-semibold text-foreground">🌐 Embedded EDAPlayground Cloud Workspace</span>
-                <span class="text-xs text-muted-foreground">(Supports ModelSim, Synopsys VCS, Riviera-PRO, and Icarus Verilog)</span>
-              </div>
-              <a href="https://www.edaplayground.com" target="_blank" class="text-xs text-primary hover:underline font-semibold">Open full EDAPlayground.com ↗</a>
-            </div>
-            <iframe id="eda-iframe" src="https://www.edaplayground.com/x/34" class="w-full h-[680px] border border-border rounded-lg shadow-sm"></iframe>
           </div>
 
         </div>
@@ -555,15 +580,15 @@ endmodule`
       const simStatus = document.getElementById('sim-status');
 
       const builtinView = document.getElementById('builtin-ide-view');
-      const edaEmbedView = document.getElementById('edaplayground-embed-view');
+      const jdoodleView = document.getElementById('jdoodle-cloud-view');
 
       if (simEngineSelect) {
         simEngineSelect.addEventListener('change', function() {
-          if (this.value === 'edaplayground') {
+          if (this.value === 'jdoodle') {
             builtinView.classList.add('hidden');
-            edaEmbedView.classList.remove('hidden');
+            jdoodleView.classList.remove('hidden');
           } else {
-            edaEmbedView.classList.add('hidden');
+            jdoodleView.classList.add('hidden');
             builtinView.classList.remove('hidden');
           }
         });
@@ -937,5 +962,8 @@ endmodule`
       }
     })();
   </script>
+
+  <!-- JDoodle Embed Script (Production Icarus Verilog Cloud Engine) -->
+  <script src="https://www.jdoodle.com/assets/jdoodle-pym.min.js" type="text/javascript"></script>
 </body>
 </html>
