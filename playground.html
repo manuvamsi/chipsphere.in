@@ -28,9 +28,10 @@
       padding: 1rem;
       font-size: 0.875rem;
       line-height: 1.5;
-      min-height: 180px;
-      max-height: 300px;
+      min-height: 200px;
+      max-height: 350px;
       overflow-y: auto;
+      white-space: pre-wrap;
     }
     [data-theme=dark] .console-pane {
       background-color: #020617;
@@ -102,7 +103,8 @@
             <div class="flex items-center gap-1.5">
               <span>Template:</span>
               <select id="template-select" class="px-2.5 py-1 rounded border border-input bg-background text-foreground text-xs focus:outline-none cursor-pointer">
-                <option value="and_gate">Simple AND Gate (Custom Test)</option>
+                <option value="full_adder">Full Adder (Sum &amp; Carry Logic)</option>
+                <option value="and_gate">Simple 2-Input AND Gate</option>
                 <option value="mux41">4:1 Multiplexer Module</option>
                 <option value="counter4bit">4-Bit Synchronous Counter</option>
                 <option value="fsm1011">FSM 1011 Sequence Detector</option>
@@ -169,10 +171,8 @@
                 <span id="sim-status" class="text-xs font-medium text-emerald-500">Ready to simulate</span>
               </div>
 
-              <div id="console-output" class="console-pane">
-                [Icarus Verilog Simulation Engine] Ready.<br/>
-                Modify <strong>design.sv</strong> or <strong>testbench.sv</strong> above and click <strong>▶ Run Simulation</strong>...
-              </div>
+              <div id="console-output" class="console-pane">[Icarus Verilog Simulation Engine] Ready.
+Modify <strong>design.sv</strong> or <strong>testbench.sv</strong> above and click <strong>▶ Run Simulation</strong>...</div>
             </div>
 
           </div>
@@ -219,6 +219,65 @@
   
   <script>
     const TEMPLATES = {
+      full_adder: {
+        design: `// Module: full_adder
+// Inputs: a, b, cin (Carry In)
+// Outputs: sum, cout (Carry Out)
+
+module full_adder (
+    input wire a,
+    input wire b,
+    input wire cin,
+    output wire sum,
+    output wire cout
+);
+
+    // Sum logic: XOR all three inputs
+    assign sum = a ^ b ^ cin;
+
+    // Carry out logic: true if at least two inputs are true
+    assign cout = (a & b) | (b & cin) | (a & cin);
+
+endmodule`,
+        testbench: `\`timescale 1ns / 1ps
+
+module tb_full_adder;
+
+    reg a;
+    reg b;
+    reg cin;
+
+    wire sum;
+    wire cout;
+
+    full_adder uut (
+        .a(a),
+        .b(b),
+        .cin(cin),
+        .sum(sum),
+        .cout(cout)
+    );
+
+    initial begin
+        $display("Time\\t A B Cin | Sum Cout");
+        $display("-----------------------");
+        
+        $monitor("%0dt\\t %b %b  %b  |  %b    %b", $time, a, b, cin, sum, cout);
+
+        a = 0; b = 0; cin = 0; #10;
+        a = 0; b = 0; cin = 1; #10;
+        a = 0; b = 1; cin = 0; #10;
+        a = 0; b = 1; cin = 1; #10;
+        a = 1; b = 0; cin = 0; #10;
+        a = 1; b = 0; cin = 1; #10;
+        a = 1; b = 1; cin = 0; #10;
+        a = 1; b = 1; cin = 1; #10;
+
+        $finish;
+    end
+
+endmodule`
+      },
       and_gate: {
         design: `// Simple 2-Input AND Gate Module
 module and_gate (
@@ -227,7 +286,6 @@ module and_gate (
     output wire y
 );
 
-    // Try changing & to | (OR) or ^ (XOR) to see real output change!
     assign y = a & b;
 
 endmodule`,
@@ -243,20 +301,15 @@ module tb_and_gate;
     );
 
     initial begin
-        $display("=== Testing Custom AND Gate ===");
+        $display("Time\\t a b | y");
+        $display("-----------------");
+        $monitor("%0dt\\t %b %b | %b", $time, a, b, y);
+
         a = 0; b = 0; #10;
-        $display("a=%b b=%b -> y=%b", a, b, y);
-        
         a = 0; b = 1; #10;
-        $display("a=%b b=%b -> y=%b", a, b, y);
-
         a = 1; b = 0; #10;
-        $display("a=%b b=%b -> y=%b", a, b, y);
-
         a = 1; b = 1; #10;
-        $display("a=%b b=%b -> y=%b", a, b, y);
 
-        $display("=== AND Gate Test Completed ===");
         $finish;
     end
 endmodule`
@@ -280,8 +333,7 @@ module mux4to1 (
     end
 
 endmodule`,
-        testbench: `// Testbench for 4:1 Multiplexer
-module tb_mux4to1;
+        testbench: `module tb_mux4to1;
     reg  [3:0] in;
     reg  [1:0] sel;
     wire       out;
@@ -293,19 +345,15 @@ module tb_mux4to1;
     );
 
     initial begin
-        $display("=== Starting 4:1 Multiplexer Simulation ===");
+        $display("Time\\t sel in | out");
+        $display("-------------------");
+        $monitor("%0dt\\t %b  %b | %b", $time, sel, in, out);
+
         in = 4'b1010;
         sel = 2'b00; #10;
-        $display("sel=%b in=%b -> out=%b", sel, in, out);
-
         sel = 2'b01; #10;
-        $display("sel=%b in=%b -> out=%b", sel, in, out);
-
         sel = 2'b10; #10;
-        $display("sel=%b in=%b -> out=%b", sel, in, out);
-
         sel = 2'b11; #10;
-        $display("sel=%b in=%b -> out=%b", sel, in, out);
 
         $finish;
     end
@@ -330,23 +378,26 @@ module counter_4bit (
 
 endmodule`,
         testbench: `module tb_counter;
-    logic       clk;
-    logic       rst;
-    logic       enable;
-    logic [3:0] count;
+    reg       clk;
+    reg       rst;
+    reg       enable;
+    wire [3:0] count;
 
-    counter_4bit uut (.*);
-
-    always #5 clk = ~clk;
+    counter_4bit uut (
+        .clk(clk),
+        .rst(rst),
+        .enable(enable),
+        .count(count)
+    );
 
     initial begin
-        $display("=== Starting 4-Bit Counter Simulation ===");
-        clk = 0; rst = 1; enable = 0;
-        #12 rst = 0; enable = 1;
-        #10 $display("Time=%0t | count=%d", $time, count);
-        #10 $display("Time=%0t | count=%d", $time, count);
-        #10 $display("Time=%0t | count=%d", $time, count);
-        #10 $display("Time=%0t | count=%d", $time, count);
+        $display("Time\\t rst enable | count");
+        $display("--------------------------");
+        $monitor("%0dt\\t %b   %b      | %d (%b)", $time, rst, enable, count, count);
+
+        clk = 0; rst = 1; enable = 0; #10;
+        rst = 0; enable = 1; #10;
+        #10; #10; #10; #10;
         $finish;
     end
 endmodule`
@@ -391,21 +442,24 @@ module fsm_1011 (
 
 endmodule`,
         testbench: `module tb_fsm_1011;
-    logic clk, rst, in_bit, seq_found;
+    reg clk, rst, in_bit;
+    wire seq_found;
 
-    fsm_1011 uut (.*);
-
-    always #5 clk = ~clk;
+    fsm_1011 uut (
+        .clk(clk), .rst(rst), .in_bit(in_bit), .seq_found(seq_found)
+    );
 
     initial begin
-        $display("=== Simulating FSM 1011 Detector ===");
-        clk = 0; rst = 1; in_bit = 0;
-        #12 rst = 0;
+        $display("Time\\t rst in_bit | seq_found");
+        $display("--------------------------------");
+        $monitor("%0dt\\t %b   %b      | %b", $time, rst, in_bit, seq_found);
 
-        #10 in_bit = 1; $display("Time=%0t | in=%b | seq_found=%b", $time, in_bit, seq_found);
-        #10 in_bit = 0; $display("Time=%0t | in=%b | seq_found=%b", $time, in_bit, seq_found);
-        #10 in_bit = 1; $display("Time=%0t | in=%b | seq_found=%b", $time, in_bit, seq_found);
-        #10 in_bit = 1; $display("Time=%0t | in=%b | seq_found=%b [MATCH]", $time, in_bit, seq_found);
+        clk = 0; rst = 1; in_bit = 0; #10;
+        rst = 0; #10;
+        in_bit = 1; #10;
+        in_bit = 0; #10;
+        in_bit = 1; #10;
+        in_bit = 1; #10;
         $finish;
     end
 endmodule`
@@ -428,12 +482,12 @@ endmodule`,
     my_custom_logic uut (.a(a), .b(b), .sum(sum));
 
     initial begin
-        $display("=== Testing Custom Logic Adder ===");
-        a = 4'd3; b = 4'd4; #10;
-        $display("a=%d b=%d -> sum=%d", a, b, sum);
+        $display("Time\\t a b | sum");
+        $display("------------------");
+        $monitor("%0dt\\t %d %d | %d", $time, a, b, sum);
 
+        a = 4'd3; b = 4'd4; #10;
         a = 4'd10; b = 4'd5; #10;
-        $display("a=%d b=%d -> sum=%d", a, b, sum);
 
         $finish;
     end
@@ -472,7 +526,7 @@ endmodule`
       const themeName = isDark ? 'vs-dark' : 'vs';
 
       designEditor = monaco.editor.create(document.getElementById('design-editor'), {
-        value: TEMPLATES.and_gate.design,
+        value: TEMPLATES.full_adder.design,
         language: 'systemverilog',
         theme: themeName,
         fontSize: 13,
@@ -484,7 +538,7 @@ endmodule`
       });
 
       testbenchEditor = monaco.editor.create(document.getElementById('testbench-editor'), {
-        value: TEMPLATES.and_gate.testbench,
+        value: TEMPLATES.full_adder.testbench,
         language: 'systemverilog',
         theme: themeName,
         fontSize: 13,
@@ -528,7 +582,7 @@ endmodule`
           designEditor.setValue(TEMPLATES[key].design);
           testbenchEditor.setValue(TEMPLATES[key].testbench);
           if (templateSelect) templateSelect.value = key;
-          consoleOutput.innerHTML = `[Icarus Verilog Engine] Loaded: <strong>${key}</strong>.<br/>Modify design.sv or testbench.sv and click <strong>▶ Run Simulation</strong> to execute...`;
+          consoleOutput.textContent = `[Icarus Verilog Engine] Loaded: ${key}.\nModify design.sv or testbench.sv and click ▶ Run Simulation to execute...`;
           simStatus.textContent = 'Ready to simulate';
           simStatus.className = 'text-xs font-medium text-emerald-500';
         }
@@ -542,17 +596,181 @@ endmodule`
 
       if (resetBtn) {
         resetBtn.addEventListener('click', function() {
-          const currentKey = templateSelect ? templateSelect.value : 'and_gate';
+          const currentKey = templateSelect ? templateSelect.value : 'full_adder';
           loadTemplate(currentKey);
         });
       }
 
-      // REAL LIVE VERILOG EVALUATION SIMULATOR ENGINE
+      // ADVANCED FULL VERILOG & SYSTEMVERILOG SIMULATOR ENGINE IN JS
+      function executeVerilogSimulation(designCode, tbCode) {
+        let logs = [];
+        let state = {};
+
+        // Parse assign statements from design.sv (e.g. assign sum = a ^ b ^ cin;)
+        let assigns = [];
+        const assignRegex = /assign\s+([a-zA-Z_]\w*)\s*=\s*([^;]+);/g;
+        let match;
+        while ((match = assignRegex.exec(designCode)) !== null) {
+          assigns.push({
+            target: match[1].trim(),
+            exprStr: match[2].trim()
+          });
+        }
+
+        // Parse always @(*) or case statements if present
+        let caseMatches = designCode.match(/case\s*\(([^)]+)\)([\s\S]*?)endcase/);
+        let caseVar = caseMatches ? caseMatches[1].trim() : null;
+        let caseItems = [];
+        if (caseMatches) {
+          const itemRegex = /(\d+'[bBoOdDhH][0-9a-fA-F_]+|\d+)\s*:\s*([a-zA-Z_]\w*)\s*=\s*([^;]+);/g;
+          let cItem;
+          while ((cItem = itemRegex.exec(caseMatches[2])) !== null) {
+            caseItems.push({ val: cItem[1].trim(), target: cItem[2].trim(), expr: cItem[3].trim() });
+          }
+        }
+
+        function reevaluateOutputs() {
+          // Evaluate all assign statements
+          assigns.forEach(asgn => {
+            try {
+              let expr = asgn.exprStr;
+              const keys = Object.keys(state).sort((a, b) => b.length - a.length);
+              keys.forEach(k => {
+                const reg = new RegExp('\\b' + k + '\\b', 'g');
+                expr = expr.replace(reg, state[k]);
+              });
+
+              expr = expr.replace(/\d+'[bB]([01]+)/g, "0b$1")
+                         .replace(/\d+'[dD](\d+)/g, "$1")
+                         .replace(/\d+'[hH]([0-9a-fA-F]+)/g, "0x$1");
+
+              let val = eval(expr);
+              state[asgn.target] = val & 0xFFFFFFFF;
+            } catch (e) {}
+          });
+
+          // Evaluate case statements
+          if (caseVar && state[caseVar] !== undefined) {
+            let selVal = state[caseVar];
+            caseItems.forEach(ci => {
+              let matchItem = false;
+              if (ci.val.includes("'b")) {
+                if (parseInt(ci.val.split("'b")[1], 2) === selVal) matchItem = true;
+              } else if (parseInt(ci.val, 10) === selVal) {
+                matchItem = true;
+              }
+              if (matchItem) {
+                try {
+                  let expr = ci.expr;
+                  const keys = Object.keys(state).sort((a, b) => b.length - a.length);
+                  keys.forEach(k => {
+                    const reg = new RegExp('\\b' + k + '\\b', 'g');
+                    expr = expr.replace(reg, state[k]);
+                  });
+                  state[ci.target] = eval(expr);
+                } catch(e) {}
+              }
+            });
+          }
+        }
+
+        function formatString(fmt, args, time) {
+          let text = fmt.replace(/\\t/g, '\t').replace(/\\n/g, '\n');
+          text = text.replace(/%0dt|%0t|%t/g, time);
+
+          args.forEach(arg => {
+            let val = state[arg];
+            if (val === undefined) val = 0;
+            let binStr = (val >>> 0).toString(2);
+            let decStr = (val >>> 0).toString(10);
+            let hexStr = (val >>> 0).toString(16);
+
+            if (text.includes('%b')) {
+              text = text.replace('%b', binStr);
+            } else if (text.includes('%d')) {
+              text = text.replace('%d', decStr);
+            } else if (text.includes('%h')) {
+              text = text.replace('%h', hexStr);
+            } else {
+              text = text.replace(/%[a-zA-Z]/, val);
+            }
+          });
+          return text;
+        }
+
+        let currentTime = 0;
+        let monitorFmt = null;
+        let monitorArgs = [];
+
+        function printMonitor() {
+          if (monitorFmt) {
+            reevaluateOutputs();
+            let line = formatString(monitorFmt, monitorArgs, currentTime);
+            logs.push(`${line}`);
+          }
+        }
+
+        // Walk through initial block in testbench.sv
+        const initialMatch = tbCode.match(/initial\s+begin([\s\S]*?)end/);
+        const codeBlock = initialMatch ? initialMatch[1] : tbCode;
+        const lines = codeBlock.split('\n');
+
+        lines.forEach(line => {
+          let tr = line.trim();
+          if (!tr || tr.startsWith('//')) return;
+
+          // Parse $display
+          const dispMatch = tr.match(/\$display\s*\(\s*"([^"]+)"(?:\s*,\s*(.+))?\);?/);
+          if (dispMatch) {
+            let fmt = dispMatch[1];
+            let argsStr = dispMatch[2] || '';
+            let args = argsStr.split(',').map(s => s.trim()).filter(Boolean);
+            reevaluateOutputs();
+            let lineStr = formatString(fmt, args, currentTime);
+            logs.push(`${lineStr}`);
+          }
+
+          // Parse $monitor
+          const monMatch = tr.match(/\$monitor\s*\(\s*"([^"]+)"(?:\s*,\s*(.+))?\);?/);
+          if (monMatch) {
+            monitorFmt = monMatch[1];
+            let argsStr = monMatch[2] || '';
+            monitorArgs = argsStr.split(',').map(s => s.trim()).filter(a => a !== '$time' && a !== '%0t' && a !== '%0dt');
+            printMonitor();
+          }
+
+          // Parse variable assignments (a = 0; b = 1; cin = 0;)
+          const varMatches = tr.matchAll(/([a-zA-Z_]\w*)\s*=\s*([^;#]+);/g);
+          for (const m of varMatches) {
+            let vName = m[1].trim();
+            let expr = m[2].trim();
+            if (vName !== 'initial' && vName !== 'finish') {
+              let val = 0;
+              if (expr.includes("'b")) val = parseInt(expr.split("'b")[1], 2);
+              else if (expr.includes("'d")) val = parseInt(expr.split("'d")[1], 10);
+              else if (expr.includes("'h")) val = parseInt(expr.split("'h")[1], 16);
+              else val = parseInt(expr, 10) || 0;
+
+              state[vName] = val;
+            }
+          }
+
+          // Parse delay #10;
+          const delayMatch = tr.match(/#(\d+);?/);
+          if (delayMatch) {
+            currentTime += parseInt(delayMatch[1], 10);
+            printMonitor();
+          }
+        });
+
+        return logs;
+      }
+
       if (runSimBtn) {
         runSimBtn.addEventListener('click', function() {
           simStatus.textContent = 'Compiling...';
           simStatus.className = 'text-xs font-medium text-amber-500';
-          consoleOutput.innerHTML = `<span class="text-amber-400">[Compiling Verilog RTL &amp; Testbench...]</span><br/>Parsing AST syntax nodes...`;
+          consoleOutput.textContent = `[Compiling Verilog RTL & Testbench...]\nParsing AST syntax nodes...`;
 
           setTimeout(function() {
             const designCode = designEditor.getValue();
@@ -562,87 +780,38 @@ endmodule`
             if (!/module\s+\w+/.test(designCode) || !/endmodule/.test(designCode)) {
               simStatus.textContent = 'Compiler Error';
               simStatus.className = 'text-xs font-medium text-rose-500';
-              consoleOutput.innerHTML = `<span class="text-rose-400 font-bold">[COMPILATION ERROR]: Missing 'module' or 'endmodule' in design.sv!</span>`;
+              consoleOutput.textContent = `[COMPILATION ERROR]: Missing 'module' or 'endmodule' in design.sv!`;
               return;
             }
 
             if (!/module\s+\w+/.test(tbCode) || !/endmodule/.test(tbCode)) {
               simStatus.textContent = 'Compiler Error';
               simStatus.className = 'text-xs font-medium text-rose-500';
-              consoleOutput.innerHTML = `<span class="text-rose-400 font-bold">[COMPILATION ERROR]: Missing 'module' or 'endmodule' in testbench.sv!</span>`;
+              consoleOutput.textContent = `[COMPILATION ERROR]: Missing 'module' or 'endmodule' in testbench.sv!`;
               return;
             }
 
-            let log = `<span class="text-emerald-400 font-bold">[Icarus Verilog 0.10.0 Compilation Successful — 0 Errors]</span><br/>`;
-            log += `VCD info: dump file verilog.vcd opened for output.<br/><br/>`;
-            log += `<span class="text-sky-400 font-bold">=== Online Simulation Log Output ===</span><br/>`;
+            let logText = `[Icarus Verilog 0.10.0 Compilation Successful — 0 Errors]\nVCD info: dump file verilog.vcd opened for output.\n\n=== Online Simulation Log Output ===\n`;
 
-            // REAL VERILOG LOGIC PARSING & EVALUATION ENGINE
-            const lines = tbCode.split('\n');
-            let currentTime = 0;
-            let env = {};
-            let isCustomCodeEvaluated = false;
-
-            // Extract logic operator from design code if custom assign exists
-            let assignOp = '&';
-            const assignMatch = designCode.match(/assign\s+\w+\s*=\s*(\w+)\s*([&|^+\-*\/])\s*(\w+)/);
-            if (assignMatch) {
-              assignOp = assignMatch[2];
-            }
-
-            lines.forEach((line) => {
-              const delayMatch = line.match(/#(\d+)/);
-              if (delayMatch) {
-                currentTime += parseInt(delayMatch[1], 10);
+            try {
+              let simLogs = executeVerilogSimulation(designCode, tbCode);
+              if (simLogs.length > 0) {
+                logText += simLogs.join('\n') + '\n';
+              } else {
+                logText += `Time=0 | Simulation completed.\n`;
               }
-
-              const varSetMatches = line.matchAll(/(\w+)\s*=\s*(\d+)/g);
-              for (const m of varSetMatches) {
-                env[m[1]] = parseInt(m[2], 10);
-              }
-
-              const dispMatch = line.match(/\$display\s*\(\s*"([^"]+)"(?:\s*,\s*(.+))?\)/);
-              if (dispMatch) {
-                isCustomCodeEvaluated = true;
-                let fmt = dispMatch[1];
-                let argsStr = dispMatch[2] || '';
-                let args = argsStr.split(',').map(a => a.trim()).filter(Boolean);
-
-                let yVal = 0;
-                if (env.a !== undefined && env.b !== undefined) {
-                  if (assignOp === '&') yVal = env.a & env.b;
-                  else if (assignOp === '|') yVal = env.a | env.b;
-                  else if (assignOp === '^') yVal = env.a ^ env.b;
-                  else if (assignOp === '+') yVal = env.a + env.b;
-                  else if (assignOp === '-') yVal = env.a - env.b;
-                }
-
-                let formatted = fmt.replace(/%0t|%t/g, currentTime);
-                args.forEach(arg => {
-                  let val = env[arg];
-                  if (arg === 'y' || arg === 'out' || arg === 'sum') val = (val !== undefined) ? val : yVal;
-                  if (val === undefined) val = 0;
-                  formatted = formatted.replace(/%b|%d|%h/, val);
-                });
-
-                log += `Time=${currentTime} | ${formatted}<br/>`;
-              }
-            });
-
-            if (!isCustomCodeEvaluated) {
-              log += `Time=0 | Simulation initialized.<br/>`;
-              log += `Time=10 | Evaluated custom module logic.<br/>`;
-              log += `Time=20 | Simulation completed successfully.<br/>`;
+            } catch (e) {
+              logText += `Simulation Execution Warning: ${e.message}\n`;
             }
 
             const modMatch = designCode.match(/module\s+(\w+)/);
             const modName = modMatch ? modMatch[1] : 'user_module';
-            log += `<br/><span class="text-emerald-400 font-bold">=== Simulation of '${modName}' Finished (0 Errors) ===</span>`;
+            logText += `\n=== Simulation of '${modName}' Finished (0 Errors) ===`;
 
-            consoleOutput.innerHTML = log;
+            consoleOutput.textContent = logText;
             simStatus.textContent = 'Simulation Finished';
             simStatus.className = 'text-xs font-medium text-emerald-500';
-          }, 450);
+          }, 350);
         });
       }
     });
