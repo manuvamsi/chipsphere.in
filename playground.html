@@ -95,7 +95,7 @@
             <div class="flex items-center gap-1.5">
               <span>Engine Mode:</span>
               <select id="sim-engine-select" class="px-2.5 py-1 rounded border border-input bg-background text-foreground text-xs focus:outline-none cursor-pointer">
-                <option value="jdoodle" selected>🚀 Icarus Verilog 12.0 Cloud (Production — Real iverilog)</option>
+                <option value="cloud" selected>🚀 Cloud — Real Icarus Verilog 12.0 (design.sv + testbench.sv)</option>
                 <option value="builtin">⚡ Quick Practice (Offline In-Browser Engine)</option>
               </select>
             </div>
@@ -119,54 +119,20 @@
             <button id="run-sim-btn" class="inline-flex items-center justify-center gap-1.5 whitespace-nowrap text-xs font-bold bg-primary text-white hover:bg-primary/90 h-8 rounded px-5 transition-colors cursor-pointer shadow-sm">
               ▶ Run Simulation
             </button>
+            <button id="open-jdoodle-btn" class="hidden inline-flex items-center justify-center gap-1.5 whitespace-nowrap text-xs font-semibold border border-primary text-primary hover:bg-primary/10 h-8 rounded px-3 transition-colors cursor-pointer" title="Opens both files merged in JDoodle Cloud">
+              🌐 Open in iverilog Cloud
+            </button>
           </div>
 
         </div>
       </section>
 
-      <!-- EDA Playground Workspace Grid -->
+      <!-- EDA Playground Workspace Grid (Strict Side by Side Editors) -->
       <section class="py-6 px-4 sm:px-6 lg:px-8 bg-background">
         <div class="max-w-7xl mx-auto space-y-6">
 
-          <!-- PRIMARY VIEW: JDoodle Native Icarus Verilog Cloud Engine -->
-          <div id="jdoodle-cloud-view" class="space-y-4">
-
-            <!-- Info Banner -->
-            <div class="flex items-center justify-between p-3 bg-card border border-border rounded-md">
-              <div class="flex items-center space-x-2">
-                <span class="text-sm font-semibold text-foreground">🚀 Production-Grade Icarus Verilog 12.0 Cloud Compiler</span>
-                <span class="text-xs text-muted-foreground">(Real native iverilog + vvp execution — identical to your local terminal)</span>
-              </div>
-              <div class="flex items-center space-x-3">
-                <a href="https://www.edaplayground.com" target="_blank" class="text-xs text-primary hover:underline font-semibold">Also try EDAPlayground.com ↗</a>
-              </div>
-            </div>
-
-            <!-- JDoodle Verilog IDE Iframe -->
-            <iframe id="jdoodle-iframe" src="https://www.jdoodle.com/execute-verilog-online/" style="width: 100%; height: 680px; border: 1px solid var(--border, #e2e8f0); border-radius: 0.5rem; overflow: hidden;" loading="lazy" allow="clipboard-write"></iframe>
-
-            <!-- Capabilities Info -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div class="p-3 bg-card border border-border rounded-md text-center">
-                <span class="text-lg">✅</span>
-                <p class="text-xs font-semibold text-foreground mt-1">Full IEEE 1364/1800 Compliance</p>
-                <p class="text-[10px] text-muted-foreground">Supports all Verilog & SystemVerilog syntax</p>
-              </div>
-              <div class="p-3 bg-card border border-border rounded-md text-center">
-                <span class="text-lg">🛑</span>
-                <p class="text-xs font-semibold text-foreground mt-1">Real Error Reporting</p>
-                <p class="text-[10px] text-muted-foreground">Exact compiler errors with line numbers from iverilog</p>
-              </div>
-              <div class="p-3 bg-card border border-border rounded-md text-center">
-                <span class="text-lg">⚡</span>
-                <p class="text-xs font-semibold text-foreground mt-1">$display, $monitor, $finish</p>
-                <p class="text-[10px] text-muted-foreground">All system tasks work exactly like your local simulation</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- SECONDARY VIEW: Quick Practice In-Browser JS Engine -->
-          <div id="builtin-ide-view" class="hidden space-y-6">
+          <!-- IDE Main View -->
+          <div id="builtin-ide-view" class="space-y-6">
 
             <!-- Side by Side Monaco Editors (design.sv left, testbench.sv right) -->
             <div class="eda-side-by-side-grid">
@@ -207,9 +173,21 @@
                 <span id="sim-status" class="text-xs font-medium text-emerald-500">Ready to simulate</span>
               </div>
 
-              <div id="console-output" class="console-pane">[Quick Practice Engine] Ready.<br/>Modify <strong>design.sv</strong> or <strong>testbench.sv</strong> above and click <strong>▶ Run Simulation</strong> to execute...</div>
+              <div id="console-output" class="console-pane">[Icarus Verilog Simulation Engine v12.0] Ready.<br/>Modify <strong>design.sv</strong> or <strong>testbench.sv</strong> above and click <strong>▶ Run Simulation</strong> to execute...</div>
             </div>
 
+          </div>
+
+          <!-- Cloud Run Info Panel -->
+          <div id="cloud-run-panel" class="p-3 bg-card border border-border rounded-md">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="text-sm font-semibold text-foreground">🚀 Real Icarus Verilog Cloud Mode</span>
+                <span class="text-xs text-muted-foreground">Both design.sv + testbench.sv will be merged and run on real iverilog 12.0</span>
+              </div>
+              <a href="https://www.edaplayground.com" target="_blank" class="text-xs text-primary hover:underline font-semibold">EDAPlayground ↗</a>
+            </div>
+            <p class="text-xs text-amber-500 mt-1.5">⚠️ Click ▶ Run Simulation → your code opens in JDoodle Cloud with both files merged. Click the orange Execute button there to run with real iverilog.</p>
           </div>
 
         </div>
@@ -580,16 +558,17 @@ endmodule`
       const simStatus = document.getElementById('sim-status');
 
       const builtinView = document.getElementById('builtin-ide-view');
-      const jdoodleView = document.getElementById('jdoodle-cloud-view');
+      const cloudPanel = document.getElementById('cloud-run-panel');
+
+      // Default: show cloud info panel
+      if (cloudPanel) cloudPanel.classList.remove('hidden');
 
       if (simEngineSelect) {
         simEngineSelect.addEventListener('change', function() {
-          if (this.value === 'jdoodle') {
-            builtinView.classList.add('hidden');
-            jdoodleView.classList.remove('hidden');
+          if (this.value === 'cloud') {
+            if (cloudPanel) cloudPanel.classList.remove('hidden');
           } else {
-            jdoodleView.classList.add('hidden');
-            builtinView.classList.remove('hidden');
+            if (cloudPanel) cloudPanel.classList.add('hidden');
           }
         });
       }
@@ -878,9 +857,43 @@ endmodule`
 
       if (runSimBtn) {
         runSimBtn.addEventListener('click', function() {
+          const engineMode = simEngineSelect ? simEngineSelect.value : 'cloud';
+
+          if (engineMode === 'cloud') {
+            // CLOUD MODE: Merge design.sv + testbench.sv into one file, open JDoodle
+            const designCode = designEditor.getValue();
+            const tbCode = testbenchEditor.getValue();
+            const merged = designCode + '\n\n// ======= TESTBENCH =======\n' + tbCode;
+
+            // Copy merged code to clipboard so user can paste in JDoodle
+            if (navigator.clipboard) {
+              navigator.clipboard.writeText(merged);
+            }
+
+            // Update console with instructions
+            simStatus.textContent = 'Opening Cloud Compiler...';
+            simStatus.className = 'text-xs font-medium text-amber-500';
+            consoleOutput.innerHTML = `
+              <span style="color:#34d399;font-weight:bold">[Cloud Mode] Both files merged (${merged.split('\n').length} lines) — Opening JDoodle Cloud Compiler...</span><br/><br/>
+              <span style="color:#38bdf8">1. A new tab will open with JDoodle Verilog IDE.</span><br/>
+              <span style="color:#38bdf8">2. Your merged design.sv + testbench.sv code has been <strong>copied to clipboard</strong>.</span><br/>
+              <span style="color:#38bdf8">3. <strong>Paste it (Ctrl+V)</strong> into the JDoodle editor, then click <strong>Execute ►</strong> to run real iverilog 12.0.</span><br/><br/>
+              <span style="color:#94a3b8">Merged code preview:</span><br/>
+              <span style="color:#64748b">${merged.substring(0, 300).replace(/</g,'&lt;').replace(/>/g,'&gt;')}...</span>
+            `;
+            simStatus.textContent = 'Code Merged — Paste in JDoodle';
+            simStatus.className = 'text-xs font-medium text-emerald-500';
+
+            setTimeout(() => {
+              window.open('https://www.jdoodle.com/execute-verilog-online/', '_blank');
+            }, 400);
+            return;
+          }
+
+          // QUICK PRACTICE (BUILTIN) MODE: JS AST engine
           simStatus.textContent = 'Compiling...';
           simStatus.className = 'text-xs font-medium text-amber-500';
-          consoleOutput.innerHTML = `<span class="text-amber-400">[Compiling Verilog RTL &amp; Testbench...]</span><br/>Parsing AST syntax nodes...`;
+          consoleOutput.innerHTML = `<span style="color:#f59e0b">[Compiling Verilog RTL &amp; Testbench...]</span><br/>Parsing AST syntax nodes...`;
 
           setTimeout(function() {
             const designCode = designEditor.getValue();
@@ -891,27 +904,23 @@ endmodule`
             if (!result.success) {
               simStatus.textContent = 'Compilation Error';
               simStatus.className = 'text-xs font-medium text-red-500 font-bold';
-              
               let errLog = `<span style="color: #ef4444; font-weight: bold;">[COMPILATION ERROR DETECTED — ${result.errors.length} ERROR(S)]</span><br/>`;
               errLog += `------------------------------------------------------------<br/>`;
               errLog += result.errors.map(err => `<span style="color: #f87171; font-weight: bold;">${err}</span>`).join('<br/>') + `<br/><br/>`;
-              errLog += `<span style="color: #94a3b8;">Monaco Editor has flagged the exact line(s) with red wavy indicators. Please fix syntax errors and re-run.</span>`;
-              
+              errLog += `<span style="color: #94a3b8;">Monaco Editor has flagged the exact line(s) with red wavy indicators.</span>`;
               consoleOutput.innerHTML = errLog;
               return;
             }
 
-            let logText = `<span style="color: #34d399; font-weight: bold;">[Icarus Verilog 12.0 Compilation Successful — 0 Errors]</span><br/>VCD info: dump file verilog.vcd opened for output.<br/><br/><span style="color: #38bdf8; font-weight: bold;">=== Online Simulation Log Output ===</span><br/>`;
-
+            let logText = `<span style="color: #34d399; font-weight: bold;">[Quick Practice Engine — Compilation Successful]</span><br/><br/><span style="color: #38bdf8; font-weight: bold;">=== Simulation Output ===</span><br/>`;
             if (result.logs.length > 0) {
               logText += result.logs.join('<br/>') + '<br/>';
             } else {
-              logText += `Time=0 | Simulation completed.<br/>`;
+              logText += `Simulation completed.<br/>`;
             }
-
             const modMatch = designCode.match(/module\s+(\w+)/);
             const modName = modMatch ? modMatch[1] : 'user_module';
-            logText += `<br/><span style="color: #34d399; font-weight: bold;">=== Simulation of '${modName}' Finished (0 Errors) ===</span>`;
+            logText += `<br/><span style="color: #34d399; font-weight: bold;">=== Simulation of '${modName}' Finished ===</span>`;
 
             consoleOutput.innerHTML = logText;
             simStatus.textContent = 'Simulation Finished';
@@ -962,8 +971,5 @@ endmodule`
       }
     })();
   </script>
-
-  <!-- JDoodle Embed Script (Production Icarus Verilog Cloud Engine) -->
-  <script src="https://www.jdoodle.com/assets/jdoodle-pym.min.js" type="text/javascript"></script>
 </body>
 </html>
