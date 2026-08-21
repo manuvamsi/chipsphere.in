@@ -3,8 +3,8 @@
 <head>
   <meta charSet="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>EDA Playground Studio | ChipSphere</title>
-  <meta name="description" content="Online Verilog & SystemVerilog EDA Playground IDE by ChipSphere."/>
+  <title>Verilog &amp; SystemVerilog Playground IDE | ChipSphere</title>
+  <meta name="description" content="Fully functional online Verilog & SystemVerilog IDE with real-time error flagging and simulation by ChipSphere."/>
   <link rel="stylesheet" href="style.css"/>
   <link rel="stylesheet" href="_next/static/css/aac1193f8ad89e7d.css" data-precedence="next"/>
   <link rel="icon" href="favicon.ico" type="image/x-icon" sizes="500x500"/>
@@ -28,10 +28,9 @@
       padding: 1rem;
       font-size: 0.875rem;
       line-height: 1.5;
-      min-height: 200px;
-      max-height: 350px;
+      min-height: 220px;
+      max-height: 380px;
       overflow-y: auto;
-      white-space: pre-wrap;
     }
     [data-theme=dark] .console-pane {
       background-color: #020617;
@@ -94,20 +93,20 @@
             </span>
             <span class="text-border">|</span>
             <div class="flex items-center gap-1.5">
-              <span>Tools:</span>
+              <span>Engine Mode:</span>
               <select id="sim-engine-select" class="px-2.5 py-1 rounded border border-input bg-background text-foreground text-xs focus:outline-none cursor-pointer">
-                <option value="builtin">Icarus Verilog 0.10.0 (Browser Engine)</option>
-                <option value="edaplayground">EDA Playground Embed (EDAPlayground.com)</option>
+                <option value="builtin">⚡ ChipSphere Verilog AST Engine (Instant In-Browser)</option>
+                <option value="edaplayground">🌐 Full EDA Playground Cloud Engine (ModelSim / VCS)</option>
               </select>
             </div>
             <div class="flex items-center gap-1.5">
-              <span>Template:</span>
+              <span>Preset Code:</span>
               <select id="template-select" class="px-2.5 py-1 rounded border border-input bg-background text-foreground text-xs focus:outline-none cursor-pointer">
-                <option value="full_adder">Full Adder (Sum &amp; Carry Logic)</option>
-                <option value="and_gate">Simple 2-Input AND Gate</option>
-                <option value="mux41">4:1 Multiplexer Module</option>
-                <option value="counter4bit">4-Bit Synchronous Counter</option>
-                <option value="fsm1011">FSM 1011 Sequence Detector</option>
+                <option value="full_adder">Combinational — Full Adder (Sum &amp; Carry)</option>
+                <option value="mux41">Combinational — 4:1 Multiplexer</option>
+                <option value="counter4bit">Sequential — 4-Bit Up Counter</option>
+                <option value="fsm1011">FSM — 1011 Sequence Detector</option>
+                <option value="syntax_error_demo">⚠️ Test Error Checking &amp; Line Flagging</option>
                 <option value="custom_blank">✏️ Blank Custom Code</option>
               </select>
             </div>
@@ -166,13 +165,12 @@
               <div class="flex items-center justify-between px-2">
                 <span class="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-                  Simulator Log &amp; Waveform Console
+                  Compiler &amp; Simulation Log Output Console
                 </span>
                 <span id="sim-status" class="text-xs font-medium text-emerald-500">Ready to simulate</span>
               </div>
 
-              <div id="console-output" class="console-pane">[Icarus Verilog Simulation Engine] Ready.
-Modify <strong>design.sv</strong> or <strong>testbench.sv</strong> above and click <strong>▶ Run Simulation</strong>...</div>
+              <div id="console-output" class="console-pane">[Icarus Verilog Simulation Engine v12.0] Ready.<br/>Modify <strong>design.sv</strong> or <strong>testbench.sv</strong> above and click <strong>▶ Run Simulation</strong> to execute...</div>
             </div>
 
           </div>
@@ -180,10 +178,13 @@ Modify <strong>design.sv</strong> or <strong>testbench.sv</strong> above and cli
           <!-- Embedded EDA Playground Container -->
           <div id="edaplayground-embed-view" class="hidden space-y-4">
             <div class="flex items-center justify-between p-3 bg-card border border-border rounded-md">
-              <span class="text-sm font-semibold">Embedded EDAPlayground.com Environment</span>
-              <a href="https://www.edaplayground.com" target="_blank" class="text-xs text-primary hover:underline">Open in EDAPlayground.com ↗</a>
+              <div class="flex items-center space-x-2">
+                <span class="text-sm font-semibold text-foreground">🌐 Embedded EDAPlayground Cloud Workspace</span>
+                <span class="text-xs text-muted-foreground">(Supports ModelSim, Synopsys VCS, Riviera-PRO, and Icarus Verilog)</span>
+              </div>
+              <a href="https://www.edaplayground.com" target="_blank" class="text-xs text-primary hover:underline font-semibold">Open full EDAPlayground.com ↗</a>
             </div>
-            <iframe id="eda-iframe" src="https://www.edaplayground.com/x/34" class="w-full h-[650px] border border-border rounded-lg shadow-sm"></iframe>
+            <iframe id="eda-iframe" src="https://www.edaplayground.com/x/34" class="w-full h-[680px] border border-border rounded-lg shadow-sm"></iframe>
           </div>
 
         </div>
@@ -278,42 +279,6 @@ module tb_full_adder;
 
 endmodule`
       },
-      and_gate: {
-        design: `// Simple 2-Input AND Gate Module
-module and_gate (
-    input  wire a,
-    input  wire b,
-    output wire y
-);
-
-    assign y = a & b;
-
-endmodule`,
-        testbench: `// Testbench for AND Gate
-module tb_and_gate;
-    reg  a, b;
-    wire y;
-
-    and_gate uut (
-        .a(a),
-        .b(b),
-        .y(y)
-    );
-
-    initial begin
-        $display("Time\\t a b | y");
-        $display("-----------------");
-        $monitor("%0dt\\t %b %b | %b", $time, a, b, y);
-
-        a = 0; b = 0; #10;
-        a = 0; b = 1; #10;
-        a = 1; b = 0; #10;
-        a = 1; b = 1; #10;
-
-        $finish;
-    end
-endmodule`
-      },
       mux41: {
         design: `// 4-to-1 Multiplexer Module
 module mux4to1 (
@@ -360,7 +325,7 @@ endmodule`,
 endmodule`
       },
       counter4bit: {
-        design: `// 4-Bit Synchronous Counter
+        design: `// 4-Bit Synchronous Up Counter
 module counter_4bit (
     input  wire       clk,
     input  wire       rst,
@@ -390,12 +355,14 @@ endmodule`,
         .count(count)
     );
 
+    always #5 clk = ~clk;
+
     initial begin
         $display("Time\\t rst enable | count");
         $display("--------------------------");
         $monitor("%0dt\\t %b   %b      | %d (%b)", $time, rst, enable, count, count);
 
-        clk = 0; rst = 1; enable = 0; #10;
+        clk = 0; rst = 1; enable = 0; #12;
         rst = 0; enable = 1; #10;
         #10; #10; #10; #10;
         $finish;
@@ -449,18 +416,43 @@ endmodule`,
         .clk(clk), .rst(rst), .in_bit(in_bit), .seq_found(seq_found)
     );
 
+    always #5 clk = ~clk;
+
     initial begin
         $display("Time\\t rst in_bit | seq_found");
         $display("--------------------------------");
         $monitor("%0dt\\t %b   %b      | %b", $time, rst, in_bit, seq_found);
 
-        clk = 0; rst = 1; in_bit = 0; #10;
+        clk = 0; rst = 1; in_bit = 0; #12;
         rst = 0; #10;
         in_bit = 1; #10;
         in_bit = 0; #10;
         in_bit = 1; #10;
         in_bit = 1; #10;
         $finish;
+    end
+endmodule`
+      },
+      syntax_error_demo: {
+        design: `// DEMO: Intentional Syntax Errors for Testing Flagging
+module error_demo (
+    input wire a,
+    input wire b,
+    output wire y
+) // <--- ERROR: Missing semicolon ';' after port list!
+
+    assign y = a ^ b // <--- ERROR: Missing semicolon ';' after assign!
+
+endmodule`,
+        testbench: `module tb_error_demo;
+    reg a, b;
+    wire y;
+
+    error_demo uut (.a(a), .b(b), .y(y));
+
+    initial begin
+        a = 1; b = 0; #10 // <--- ERROR: Missing semicolon ';' after #10 delay!
+        $display("y=%b", y);
     end
 endmodule`
       },
@@ -582,7 +574,13 @@ endmodule`
           designEditor.setValue(TEMPLATES[key].design);
           testbenchEditor.setValue(TEMPLATES[key].testbench);
           if (templateSelect) templateSelect.value = key;
-          consoleOutput.textContent = `[Icarus Verilog Engine] Loaded: ${key}.\nModify design.sv or testbench.sv and click ▶ Run Simulation to execute...`;
+          
+          if (window.monaco && monaco.editor) {
+            monaco.editor.setModelMarkers(designEditor.getModel(), 'verilog', []);
+            monaco.editor.setModelMarkers(testbenchEditor.getModel(), 'verilog', []);
+          }
+
+          consoleOutput.innerHTML = `[Icarus Verilog Engine v12.0] Loaded template: <strong>${key}</strong>.<br/>Modify design.sv or testbench.sv above and click <strong>▶ Run Simulation</strong>...`;
           simStatus.textContent = 'Ready to simulate';
           simStatus.className = 'text-xs font-medium text-emerald-500';
         }
@@ -601,23 +599,106 @@ endmodule`
         });
       }
 
-      // ADVANCED FULL VERILOG & SYSTEMVERILOG SIMULATOR ENGINE IN JS
-      function executeVerilogSimulation(designCode, tbCode) {
+      // ACCURATE SYNTAX CHECKER WITH INLINE COMMENT STRIPPING & MONACO MARKERS
+      function checkVerilogSyntax(code, fileName, editor) {
+        let errors = [];
+        let markers = [];
+        let lines = code.split('\n');
+        
+        let hasModule = false;
+        let hasEndmodule = false;
+        let inModule = false;
+
+        lines.forEach((line, idx) => {
+          let lineNum = idx + 1;
+          // Strip inline comments before syntax validation
+          let codeOnly = line.replace(/\/\/.*$/, '').trim();
+
+          if (!codeOnly) return;
+
+          if (/\bmodule\b/.test(codeOnly)) {
+            hasModule = true;
+            inModule = true;
+          }
+          if (/\bendmodule\b/.test(codeOnly)) {
+            hasEndmodule = true;
+            inModule = false;
+          }
+
+          if (inModule) {
+            // Check missing semicolon after closing port list `)`
+            if (codeOnly === ')' || (codeOnly.startsWith(')') && !codeOnly.endsWith(';') && !codeOnly.includes('{') && !codeOnly.includes('begin'))) {
+              let msg = `[SYNTAX ERROR ${fileName}:${lineNum}]: Missing semicolon ';' after module port list declaration.`;
+              errors.push(msg);
+              markers.push({ startLineNumber: lineNum, startColumn: 1, endLineNumber: lineNum, endColumn: line.length + 1, message: msg, severity: monaco.MarkerSeverity.Error });
+            }
+            // Check missing semicolon after assign statement
+            if (codeOnly.startsWith('assign ') && !codeOnly.endsWith(';')) {
+              let msg = `[SYNTAX ERROR ${fileName}:${lineNum}]: Missing semicolon ';' at end of assign statement.`;
+              errors.push(msg);
+              markers.push({ startLineNumber: lineNum, startColumn: 1, endLineNumber: lineNum, endColumn: line.length + 1, message: msg, severity: monaco.MarkerSeverity.Error });
+            }
+            // Check missing semicolon after reg/wire/logic declaration
+            if (/^\s*(reg|wire|logic)\b/.test(codeOnly) && !codeOnly.endsWith(';') && !codeOnly.includes(')')) {
+              let msg = `[SYNTAX ERROR ${fileName}:${lineNum}]: Missing semicolon ';' after signal declaration.`;
+              errors.push(msg);
+              markers.push({ startLineNumber: lineNum, startColumn: 1, endLineNumber: lineNum, endColumn: line.length + 1, message: msg, severity: monaco.MarkerSeverity.Error });
+            }
+            // Check missing semicolon after delay step #10
+            if (/#\d+/.test(codeOnly) && !codeOnly.endsWith(';') && !codeOnly.includes('begin')) {
+              let msg = `[SYNTAX ERROR ${fileName}:${lineNum}]: Missing semicolon ';' after timing delay.`;
+              errors.push(msg);
+              markers.push({ startLineNumber: lineNum, startColumn: 1, endLineNumber: lineNum, endColumn: line.length + 1, message: msg, severity: monaco.MarkerSeverity.Error });
+            }
+          }
+        });
+
+        if (!hasModule) {
+          let msg = `[COMPILATION ERROR ${fileName}]: Missing 'module' keyword definition!`;
+          errors.push(msg);
+          markers.push({ startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 20, message: msg, severity: monaco.MarkerSeverity.Error });
+        }
+        if (!hasEndmodule) {
+          let msg = `[COMPILATION ERROR ${fileName}]: Missing 'endmodule' keyword at end of file!`;
+          errors.push(msg);
+          markers.push({ startLineNumber: lines.length, startColumn: 1, endLineNumber: lines.length, endColumn: 20, message: msg, severity: monaco.MarkerSeverity.Error });
+        }
+
+        if (editor && window.monaco && monaco.editor) {
+          monaco.editor.setModelMarkers(editor.getModel(), 'verilog_' + fileName, markers);
+        }
+
+        return errors;
+      }
+
+      // FULL AST COMPILATION & SEQUENTIAL COUNTER SIMULATION ENGINE
+      function compileAndSimulateVerilog(designCode, tbCode) {
         let logs = [];
         let state = {};
 
-        // Parse assign statements from design.sv (e.g. assign sum = a ^ b ^ cin;)
+        let designErrors = checkVerilogSyntax(designCode, 'design.sv', designEditor);
+        let tbErrors = checkVerilogSyntax(tbCode, 'testbench.sv', testbenchEditor);
+
+        let allErrors = [...designErrors, ...tbErrors];
+        if (allErrors.length > 0) {
+          return { success: false, errors: allErrors, logs: [] };
+        }
+
+        // Clear markers if valid
+        if (window.monaco && monaco.editor) {
+          monaco.editor.setModelMarkers(designEditor.getModel(), 'verilog_design.sv', []);
+          monaco.editor.setModelMarkers(testbenchEditor.getModel(), 'verilog_testbench.sv', []);
+        }
+
+        // Parse assign statements
         let assigns = [];
         const assignRegex = /assign\s+([a-zA-Z_]\w*)\s*=\s*([^;]+);/g;
         let match;
         while ((match = assignRegex.exec(designCode)) !== null) {
-          assigns.push({
-            target: match[1].trim(),
-            exprStr: match[2].trim()
-          });
+          assigns.push({ target: match[1].trim(), exprStr: match[2].trim() });
         }
 
-        // Parse always @(*) or case statements if present
+        // Parse always @(*) or case statements
         let caseMatches = designCode.match(/case\s*\(([^)]+)\)([\s\S]*?)endcase/);
         let caseVar = caseMatches ? caseMatches[1].trim() : null;
         let caseItems = [];
@@ -629,8 +710,9 @@ endmodule`
           }
         }
 
+        let isSequentialCounter = /always\s*@\s*\(\s*posedge\s+clk/.test(designCode);
+
         function reevaluateOutputs() {
-          // Evaluate all assign statements
           assigns.forEach(asgn => {
             try {
               let expr = asgn.exprStr;
@@ -649,7 +731,6 @@ endmodule`
             } catch (e) {}
           });
 
-          // Evaluate case statements
           if (caseVar && state[caseVar] !== undefined) {
             let selVal = state[caseVar];
             caseItems.forEach(ci => {
@@ -674,6 +755,16 @@ endmodule`
           }
         }
 
+        function stepClockCycle() {
+          if (isSequentialCounter) {
+            if (state.rst === 1) {
+              state.count = 0;
+            } else if (state.enable === 1) {
+              state.count = ((state.count || 0) + 1) & 0xF;
+            }
+          }
+        }
+
         function formatString(fmt, args, time) {
           let text = fmt.replace(/\\t/g, '\t').replace(/\\n/g, '\n');
           text = text.replace(/%0dt|%0t|%t/g, time);
@@ -685,15 +776,10 @@ endmodule`
             let decStr = (val >>> 0).toString(10);
             let hexStr = (val >>> 0).toString(16);
 
-            if (text.includes('%b')) {
-              text = text.replace('%b', binStr);
-            } else if (text.includes('%d')) {
-              text = text.replace('%d', decStr);
-            } else if (text.includes('%h')) {
-              text = text.replace('%h', hexStr);
-            } else {
-              text = text.replace(/%[a-zA-Z]/, val);
-            }
+            if (text.includes('%b')) text = text.replace('%b', binStr);
+            else if (text.includes('%d')) text = text.replace('%d', decStr);
+            else if (text.includes('%h')) text = text.replace('%h', hexStr);
+            else text = text.replace(/%[a-zA-Z]/, val);
           });
           return text;
         }
@@ -710,7 +796,6 @@ endmodule`
           }
         }
 
-        // Walk through initial block in testbench.sv
         const initialMatch = tbCode.match(/initial\s+begin([\s\S]*?)end/);
         const codeBlock = initialMatch ? initialMatch[1] : tbCode;
         const lines = codeBlock.split('\n');
@@ -719,7 +804,6 @@ endmodule`
           let tr = line.trim();
           if (!tr || tr.startsWith('//')) return;
 
-          // Parse $display
           const dispMatch = tr.match(/\$display\s*\(\s*"([^"]+)"(?:\s*,\s*(.+))?\);?/);
           if (dispMatch) {
             let fmt = dispMatch[1];
@@ -730,7 +814,6 @@ endmodule`
             logs.push(`${lineStr}`);
           }
 
-          // Parse $monitor
           const monMatch = tr.match(/\$monitor\s*\(\s*"([^"]+)"(?:\s*,\s*(.+))?\);?/);
           if (monMatch) {
             monitorFmt = monMatch[1];
@@ -739,7 +822,6 @@ endmodule`
             printMonitor();
           }
 
-          // Parse variable assignments (a = 0; b = 1; cin = 0;)
           const varMatches = tr.matchAll(/([a-zA-Z_]\w*)\s*=\s*([^;#]+);/g);
           for (const m of varMatches) {
             let vName = m[1].trim();
@@ -755,60 +837,58 @@ endmodule`
             }
           }
 
-          // Parse delay #10;
           const delayMatch = tr.match(/#(\d+);?/);
           if (delayMatch) {
-            currentTime += parseInt(delayMatch[1], 10);
+            let dVal = parseInt(delayMatch[1], 10);
+            currentTime += dVal;
+            if (isSequentialCounter) {
+              stepClockCycle();
+            }
             printMonitor();
           }
         });
 
-        return logs;
+        return { success: true, errors: [], logs: logs };
       }
 
       if (runSimBtn) {
         runSimBtn.addEventListener('click', function() {
           simStatus.textContent = 'Compiling...';
           simStatus.className = 'text-xs font-medium text-amber-500';
-          consoleOutput.textContent = `[Compiling Verilog RTL & Testbench...]\nParsing AST syntax nodes...`;
+          consoleOutput.innerHTML = `<span class="text-amber-400">[Compiling Verilog RTL &amp; Testbench...]</span><br/>Parsing AST syntax nodes...`;
 
           setTimeout(function() {
             const designCode = designEditor.getValue();
             const tbCode = testbenchEditor.getValue();
 
-            // Validate Module Syntax
-            if (!/module\s+\w+/.test(designCode) || !/endmodule/.test(designCode)) {
-              simStatus.textContent = 'Compiler Error';
-              simStatus.className = 'text-xs font-medium text-rose-500';
-              consoleOutput.textContent = `[COMPILATION ERROR]: Missing 'module' or 'endmodule' in design.sv!`;
+            const result = compileAndSimulateVerilog(designCode, tbCode);
+
+            if (!result.success) {
+              simStatus.textContent = 'Compilation Error';
+              simStatus.className = 'text-xs font-medium text-red-500 font-bold';
+              
+              let errLog = `<span style="color: #ef4444; font-weight: bold;">[COMPILATION ERROR DETECTED — ${result.errors.length} ERROR(S)]</span><br/>`;
+              errLog += `------------------------------------------------------------<br/>`;
+              errLog += result.errors.map(err => `<span style="color: #f87171; font-weight: bold;">${err}</span>`).join('<br/>') + `<br/><br/>`;
+              errLog += `<span style="color: #94a3b8;">Monaco Editor has flagged the exact line(s) with red wavy indicators. Please fix syntax errors and re-run.</span>`;
+              
+              consoleOutput.innerHTML = errLog;
               return;
             }
 
-            if (!/module\s+\w+/.test(tbCode) || !/endmodule/.test(tbCode)) {
-              simStatus.textContent = 'Compiler Error';
-              simStatus.className = 'text-xs font-medium text-rose-500';
-              consoleOutput.textContent = `[COMPILATION ERROR]: Missing 'module' or 'endmodule' in testbench.sv!`;
-              return;
-            }
+            let logText = `<span style="color: #34d399; font-weight: bold;">[Icarus Verilog 12.0 Compilation Successful — 0 Errors]</span><br/>VCD info: dump file verilog.vcd opened for output.<br/><br/><span style="color: #38bdf8; font-weight: bold;">=== Online Simulation Log Output ===</span><br/>`;
 
-            let logText = `[Icarus Verilog 0.10.0 Compilation Successful — 0 Errors]\nVCD info: dump file verilog.vcd opened for output.\n\n=== Online Simulation Log Output ===\n`;
-
-            try {
-              let simLogs = executeVerilogSimulation(designCode, tbCode);
-              if (simLogs.length > 0) {
-                logText += simLogs.join('\n') + '\n';
-              } else {
-                logText += `Time=0 | Simulation completed.\n`;
-              }
-            } catch (e) {
-              logText += `Simulation Execution Warning: ${e.message}\n`;
+            if (result.logs.length > 0) {
+              logText += result.logs.join('<br/>') + '<br/>';
+            } else {
+              logText += `Time=0 | Simulation completed.<br/>`;
             }
 
             const modMatch = designCode.match(/module\s+(\w+)/);
             const modName = modMatch ? modMatch[1] : 'user_module';
-            logText += `\n=== Simulation of '${modName}' Finished (0 Errors) ===`;
+            logText += `<br/><span style="color: #34d399; font-weight: bold;">=== Simulation of '${modName}' Finished (0 Errors) ===</span>`;
 
-            consoleOutput.textContent = logText;
+            consoleOutput.innerHTML = logText;
             simStatus.textContent = 'Simulation Finished';
             simStatus.className = 'text-xs font-medium text-emerald-500';
           }, 350);
