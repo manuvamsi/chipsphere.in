@@ -626,6 +626,8 @@
         themeBtn.addEventListener('click', function() {
           isDark = !isDark;
           localStorage.setItem('theme', isDark ? 'dark' : 'light');
+          htmlEl.classList.add('theme-anim');
+          setTimeout(function() { htmlEl.classList.remove('theme-anim'); }, 300);
           updateTheme();
         });
       }

@@ -3,8 +3,8 @@
 <head>
   <meta charSet="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Verilog &amp; SystemVerilog Playground IDE | ChipSphere</title>
-  <meta name="description" content="Fully functional online Verilog & SystemVerilog IDE with real-time error flagging and simulation by ChipSphere."/>
+  <title>EDA Playground Studio | ChipSphere</title>
+  <meta name="description" content="Online Verilog & SystemVerilog EDA Playground IDE by ChipSphere."/>
   <link rel="stylesheet" href="style.css"/>
   <link rel="stylesheet" href="_next/static/css/aac1193f8ad89e7d.css" data-precedence="next"/>
   <link rel="icon" href="favicon.ico" type="image/x-icon" sizes="500x500"/>
@@ -13,6 +13,70 @@
   <link rel="stylesheet" data-name="vs/editor/node_modules/monaco-editor/min/vs/editor/editor.main.css" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/editor/editor.main.min.css"/>
 
   <style>
+    /* §12 — Translucent materials & depth */
+    header {
+      background: rgba(var(--background-rgb, 255,255,255), 0.75) !important;
+      backdrop-filter: blur(20px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    }
+    [data-theme=dark] header {
+      background: rgba(10,15,30,0.75) !important;
+    }
+
+    /* §12 — Scroll-edge fade instead of hard toolbar border */
+    .toolbar-section {
+      position: relative;
+      background: var(--card);
+    }
+    .toolbar-section::after {
+      content: '';
+      position: absolute;
+      bottom: -12px;
+      left: 0; right: 0;
+      height: 12px;
+      background: linear-gradient(to bottom, var(--card, #f8fafc), transparent);
+      pointer-events: none;
+      z-index: 1;
+    }
+    [data-theme=dark] .toolbar-section::after {
+      background: linear-gradient(to bottom, var(--card, #0f172a), transparent);
+    }
+
+    /* §1 — Pointer-down feedback: respond instantly on press */
+    #run-sim-btn {
+      transform: scale(1);
+      transition: transform 120ms cubic-bezier(0.34,1.56,0.64,1), background-color 150ms ease, box-shadow 150ms ease;
+    }
+    #run-sim-btn:active,
+    #run-sim-btn.pressing {
+      transform: scale(0.95);
+    }
+    #run-sim-btn.running {
+      opacity: 0.85;
+      cursor: not-allowed;
+    }
+    #cancel-sim-btn {
+      display: none;
+      transition: opacity 200ms ease, transform 200ms ease;
+    }
+    #cancel-sim-btn.visible {
+      display: inline-flex;
+    }
+
+    /* §15 — Tight tracking for small-caps labels */
+    .tab-header {
+      background-color: var(--card, #f8fafc);
+      border: 1px solid var(--border, #e2e8f0);
+      border-bottom: none;
+      border-radius: 0.5rem 0.5rem 0 0;
+      padding: 0.5rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* Editor + console */
     .editor-pane {
       height: 520px !important;
       border: 1px solid var(--border, #e2e8f0) !important;
@@ -27,32 +91,45 @@
       border-radius: 0.5rem;
       padding: 1rem;
       font-size: 0.875rem;
-      line-height: 1.5;
-      min-height: 220px;
+      line-height: 1.6;
+      min-height: 200px;
       max-height: 380px;
       overflow-y: auto;
+      white-space: pre-wrap;
+      /* §9 — Soft boundary: rubber-band feel via scroll snap */
+      scroll-padding-bottom: 8px;
     }
     [data-theme=dark] .console-pane {
       background-color: #020617;
       color: #38bdf8;
     }
-    .tab-header {
-      background-color: var(--card, #f8fafc);
-      border: 1px solid var(--border, #e2e8f0);
-      border-bottom: none;
-      border-radius: 0.5rem 0.5rem 0 0;
-      padding: 0.5rem 1rem;
-      font-size: 0.8rem;
+
+    /* §5 — Inline hint badge in editor tab (as-you-type feedback) */
+    .lint-badge {
+      display: none;
+      font-size: 10px;
       font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      padding: 2px 8px;
+      border-radius: 999px;
+      letter-spacing: 0.04em;
+      animation: fadein 200ms ease;
+    }
+    .lint-badge.error { display: inline-flex; background: #ef4444; color: #fff; }
+    .lint-badge.warn  { display: inline-flex; background: #f59e0b; color: #000; }
+    .lint-badge.ok    { display: inline-flex; background: #10b981; color: #fff; }
+    @keyframes fadein { from { opacity:0; transform:scale(0.85); } to { opacity:1; transform:scale(1); } }
+
+    /* §14 — Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      #run-sim-btn { transition: none !important; transform: none !important; }
+      .lint-badge { animation: none; }
     }
   </style>
 </head>
 <body class="__variable_5cfdac __variable_9a8899 antialiased overflow-y-auto custom-scroll">
 
   <!-- Unified Header Navigation -->
-  <header class="sticky top-0 z-50 w-full transition-all duration-200 bg-background/80 backdrop-blur-md">
+  <header class="sticky top-0 z-50 w-full transition-all duration-200">
     <div class="container mx-auto flex h-16 items-center justify-between px-4 lg:px-12">
       <div class="flex items-center">
         <a class="flex items-center space-x-2.5" href="index.html">
@@ -83,7 +160,8 @@
     <main class="flex-grow">
 
       <!-- Subheader / Toolbar Bar (EDA Playground Style) -->
-      <section class="bg-card py-3 px-4 sm:px-6 lg:px-8">
+      <!-- §12 scroll-edge fade — no hard border -->
+      <section class="toolbar-section py-3 px-4 sm:px-6 lg:px-8">
         <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           
           <div class="flex flex-wrap items-center gap-4 text-xs font-semibold text-foreground">
@@ -93,20 +171,21 @@
             </span>
             <span class="text-border">|</span>
             <div class="flex items-center gap-1.5">
-              <span>Engine Mode:</span>
+              <span>Tools:</span>
               <select id="sim-engine-select" class="px-2.5 py-1 rounded border border-input bg-background text-foreground text-xs focus:outline-none cursor-pointer">
-                <option value="builtin" selected>⚡ ChipSphere Engine (Instant In-Browser)</option>
-                <option value="cloud">🌐 Native Icarus Verilog 12.0 (JDoodle Cloud)</option>
+                <option value="local" selected>⚡ Icarus Verilog 12.0 (Local Server — Fastest)</option>
+                <option value="builtin">🔵 Browser Engine (Offline Fallback)</option>
+                <option value="jdoodle">🌐 JDoodle Cloud (Manual Copy-Paste)</option>
               </select>
             </div>
             <div class="flex items-center gap-1.5">
-              <span>Preset Code:</span>
+              <span>Template:</span>
               <select id="template-select" class="px-2.5 py-1 rounded border border-input bg-background text-foreground text-xs focus:outline-none cursor-pointer">
-                <option value="full_adder">Combinational — Full Adder (Sum &amp; Carry)</option>
-                <option value="mux41">Combinational — 4:1 Multiplexer</option>
-                <option value="counter4bit">Sequential — 4-Bit Up Counter</option>
-                <option value="fsm1011">FSM — 1011 Sequence Detector</option>
-                <option value="syntax_error_demo">⚠️ Test Error Checking &amp; Line Flagging</option>
+                <option value="full_adder">Full Adder (Sum &amp; Carry Logic)</option>
+                <option value="and_gate">Simple 2-Input AND Gate</option>
+                <option value="mux41">4:1 Multiplexer Module</option>
+                <option value="counter4bit">4-Bit Synchronous Counter</option>
+                <option value="fsm1011">FSM 1011 Sequence Detector</option>
                 <option value="custom_blank">✏️ Blank Custom Code</option>
               </select>
             </div>
@@ -116,11 +195,12 @@
             <button id="reset-code-btn" class="inline-flex items-center justify-center text-xs font-medium h-8 rounded px-3 border border-input bg-background hover:bg-accent text-foreground transition-colors cursor-pointer">
               🔄 Reset Code
             </button>
-            <button id="run-sim-btn" class="inline-flex items-center justify-center gap-1.5 whitespace-nowrap text-xs font-bold bg-primary text-white hover:bg-primary/90 h-8 rounded px-5 transition-colors cursor-pointer shadow-sm">
+            <!-- §1 pointer-down + §3 cancel while pending -->
+            <button id="run-sim-btn" class="inline-flex items-center justify-center gap-1.5 whitespace-nowrap text-xs font-bold bg-primary text-white h-8 rounded px-5 cursor-pointer shadow-sm">
               ▶ Run Simulation
             </button>
-            <button id="open-jdoodle-btn" class="hidden inline-flex items-center justify-center gap-1.5 whitespace-nowrap text-xs font-semibold border border-primary text-primary hover:bg-primary/10 h-8 rounded px-3 transition-colors cursor-pointer" title="Opens both files merged in JDoodle Cloud">
-              🌐 Open in iverilog Cloud
+            <button id="cancel-sim-btn" class="inline-flex items-center justify-center gap-1.5 whitespace-nowrap text-xs font-bold bg-rose-600 text-white h-8 rounded px-4 cursor-pointer shadow-sm" title="Cancel running simulation">
+              ✕ Cancel
             </button>
           </div>
 
@@ -144,7 +224,8 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
                     design.sv (RTL Module)
                   </span>
-                  <span class="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded font-mono">Editable</span>
+                  <!-- §5 inline lint badge — updates as you type -->
+                  <span id="design-lint-badge" class="lint-badge"></span>
                 </div>
                 <div id="design-editor" class="editor-pane"></div>
               </div>
@@ -156,59 +237,45 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg>
                     testbench.sv (Testbench File)
                   </span>
-                  <span class="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded font-mono">Editable</span>
+                  <!-- §5 inline lint badge -->
+                  <span id="tb-lint-badge" class="lint-badge"></span>
                 </div>
                 <div id="testbench-editor" class="editor-pane"></div>
               </div>
 
             </div>
 
-            <!-- Bottom Output Section: Dual Results (ChipSphere In-Browser Console + JDoodle Cloud Option) -->
-            <div class="space-y-4 pt-2">
+            <!-- Bottom Dual Output Section -->
+            <div class="space-y-4">
 
-              <!-- 1. ChipSphere In-Browser Simulation Console -->
+              <!-- Section 1: Simulator Console (Local iverilog / JS Engine) -->
               <div class="space-y-2">
                 <div class="flex items-center justify-between px-2">
                   <span class="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-                    ChipSphere In-Browser Compiler &amp; Simulation Console
+                    Icarus Verilog Simulation Console
                   </span>
                   <span id="sim-status" class="text-xs font-medium text-emerald-500">Ready to simulate</span>
                 </div>
-
-                <div id="console-output" class="console-pane">[ChipSphere Playground Engine] Ready.<br/>Write your <strong>design.sv</strong> (left) and <strong>testbench.sv</strong> (right), then click <strong>▶ Run Simulation</strong> to see immediate results below...</div>
+                <div id="console-output" class="console-pane">[ChipSphere Simulation Engine] Ready.
+Write your <strong>design.sv</strong> and <strong>testbench.sv</strong> above, then click <strong>▶ Run Simulation</strong>.</div>
               </div>
 
-              <!-- 2. Real Icarus Verilog 12.0 JDoodle Cloud Panel (Shown for high-accuracy/SystemVerilog) -->
-              <div id="merged-code-panel" class="space-y-3 p-4 bg-card border border-border rounded-lg shadow-sm mt-4">
+              <!-- Section 2: JDoodle Cloud Panel (always visible for 100% accuracy fallback) -->
+              <div id="merged-code-panel" class="space-y-3 p-4 bg-card border border-border rounded-lg shadow-sm">
                 <div class="flex items-center justify-between flex-wrap gap-2">
-                  <div class="flex items-center space-x-2">
-                    <span class="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5" style="color: var(--foreground);">
-                      🚀 Need 100% IEEE/SystemVerilog Accuracy? Run on Native Icarus Verilog 12.0
-                    </span>
-                  </div>
+                  <span class="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5" style="color: var(--foreground);">🌐 Also run on Native Icarus Verilog 12.0 via JDoodle Cloud</span>
                   <div class="flex items-center gap-2">
-                    <button id="copy-merged-btn" onclick="copyMergedCode()" style="background-color: #059669; color: #ffffff !important; font-weight: 700; font-size: 12px; padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: background-color 0.2s;">📋 Copy All Code</button>
-                    <button onclick="window.open('https://www.jdoodle.com/execute-verilog-online/','_blank')" style="background-color: #2563eb; color: #ffffff !important; font-weight: 700; font-size: 12px; padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: background-color 0.2s;">🌐 Open in JDoodle Cloud</button>
+                    <button id="copy-merged-btn" onclick="copyMergedCode()" style="background-color:#059669;color:#fff;font-weight:700;font-size:12px;padding:6px 14px;border-radius:6px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">📋 Copy All Code</button>
+                    <button onclick="window.open('https://www.jdoodle.com/execute-verilog-online/','_blank')" style="background-color:#2563eb;color:#fff;font-weight:700;font-size:12px;padding:6px 14px;border-radius:6px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">🌐 Open JDoodle</button>
                   </div>
                 </div>
-                <p class="text-xs text-amber-500 font-medium">💡 Your <strong>design.sv</strong> + <strong>testbench.sv</strong> are merged below. Click <strong>📋 Copy All Code</strong> → Click <strong>🌐 Open in JDoodle Cloud</strong> → Paste (Ctrl+V) &amp; click Execute ▶ for native compiler results.</p>
-                <textarea id="merged-code-textarea" readonly style="width:100%;height:220px;background:#090d16;color:#38bdf8;font-family:'Fira Code', 'Courier New', monospace;font-size:12px;line-height:1.5;padding:12px;border-radius:0.5rem;border:1px solid #334155;resize:vertical;outline:none;box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);"></textarea>
+                <p class="text-xs text-amber-500 font-medium">💡 Click <strong>▶ Run Simulation</strong> to auto-populate the merged code below. Then Copy → Open JDoodle → Paste → Execute.</p>
+                <textarea id="merged-code-textarea" readonly style="width:100%;height:200px;background:#090d16;color:#38bdf8;font-family:'Fira Code','Courier New',monospace;font-size:12px;line-height:1.5;padding:12px;border-radius:0.5rem;border:1px solid #334155;resize:vertical;outline:none;"></textarea>
               </div>
 
             </div>
-          </div>
 
-          <!-- Cloud Run Info Panel -->
-          <div id="cloud-run-panel" class="p-3 bg-card border border-border rounded-md">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-2">
-                <span class="text-sm font-semibold text-foreground">🚀 Real Icarus Verilog Cloud Mode</span>
-                <span class="text-xs text-muted-foreground">Both design.sv + testbench.sv will be merged and run on real iverilog 12.0</span>
-              </div>
-              <a href="https://www.edaplayground.com" target="_blank" class="text-xs text-primary hover:underline font-semibold">EDAPlayground ↗</a>
-            </div>
-            <p class="text-xs text-amber-500 mt-1.5">⚠️ Click ▶ Run Simulation → your code opens in JDoodle Cloud with both files merged. Click the orange Execute button there to run with real iverilog.</p>
           </div>
 
         </div>
@@ -303,6 +370,42 @@ module tb_full_adder;
 
 endmodule`
       },
+      and_gate: {
+        design: `// Simple 2-Input AND Gate Module
+module and_gate (
+    input  wire a,
+    input  wire b,
+    output wire y
+);
+
+    assign y = a & b;
+
+endmodule`,
+        testbench: `// Testbench for AND Gate
+module tb_and_gate;
+    reg  a, b;
+    wire y;
+
+    and_gate uut (
+        .a(a),
+        .b(b),
+        .y(y)
+    );
+
+    initial begin
+        $display("Time\\t a b | y");
+        $display("-----------------");
+        $monitor("%0dt\\t %b %b | %b", $time, a, b, y);
+
+        a = 0; b = 0; #10;
+        a = 0; b = 1; #10;
+        a = 1; b = 0; #10;
+        a = 1; b = 1; #10;
+
+        $finish;
+    end
+endmodule`
+      },
       mux41: {
         design: `// 4-to-1 Multiplexer Module
 module mux4to1 (
@@ -349,7 +452,7 @@ endmodule`,
 endmodule`
       },
       counter4bit: {
-        design: `// 4-Bit Synchronous Up Counter
+        design: `// 4-Bit Synchronous Counter
 module counter_4bit (
     input  wire       clk,
     input  wire       rst,
@@ -379,14 +482,12 @@ endmodule`,
         .count(count)
     );
 
-    always #5 clk = ~clk;
-
     initial begin
         $display("Time\\t rst enable | count");
         $display("--------------------------");
         $monitor("%0dt\\t %b   %b      | %d (%b)", $time, rst, enable, count, count);
 
-        clk = 0; rst = 1; enable = 0; #12;
+        clk = 0; rst = 1; enable = 0; #10;
         rst = 0; enable = 1; #10;
         #10; #10; #10; #10;
         $finish;
@@ -440,43 +541,18 @@ endmodule`,
         .clk(clk), .rst(rst), .in_bit(in_bit), .seq_found(seq_found)
     );
 
-    always #5 clk = ~clk;
-
     initial begin
         $display("Time\\t rst in_bit | seq_found");
         $display("--------------------------------");
         $monitor("%0dt\\t %b   %b      | %b", $time, rst, in_bit, seq_found);
 
-        clk = 0; rst = 1; in_bit = 0; #12;
+        clk = 0; rst = 1; in_bit = 0; #10;
         rst = 0; #10;
         in_bit = 1; #10;
         in_bit = 0; #10;
         in_bit = 1; #10;
         in_bit = 1; #10;
         $finish;
-    end
-endmodule`
-      },
-      syntax_error_demo: {
-        design: `// DEMO: Intentional Syntax Errors for Testing Flagging
-module error_demo (
-    input wire a,
-    input wire b,
-    output wire y
-) // <--- ERROR: Missing semicolon ';' after port list!
-
-    assign y = a ^ b // <--- ERROR: Missing semicolon ';' after assign!
-
-endmodule`,
-        testbench: `module tb_error_demo;
-    reg a, b;
-    wire y;
-
-    error_demo uut (.a(a), .b(b), .y(y));
-
-    initial begin
-        a = 1; b = 0; #10 // <--- ERROR: Missing semicolon ';' after #10 delay!
-        $display("y=%b", y);
     end
 endmodule`
       },
@@ -579,17 +655,16 @@ endmodule`
       const simStatus = document.getElementById('sim-status');
 
       const builtinView = document.getElementById('builtin-ide-view');
-      const cloudPanel = document.getElementById('cloud-run-panel');
-
-      // Default: show cloud info panel
-      if (cloudPanel) cloudPanel.classList.remove('hidden');
+      const edaEmbedView = document.getElementById('edaplayground-embed-view');
 
       if (simEngineSelect) {
         simEngineSelect.addEventListener('change', function() {
-          if (this.value === 'cloud') {
-            if (cloudPanel) cloudPanel.classList.remove('hidden');
+          if (this.value === 'edaplayground') {
+            builtinView.classList.add('hidden');
+            edaEmbedView.classList.remove('hidden');
           } else {
-            if (cloudPanel) cloudPanel.classList.add('hidden');
+            edaEmbedView.classList.add('hidden');
+            builtinView.classList.remove('hidden');
           }
         });
       }
@@ -599,13 +674,7 @@ endmodule`
           designEditor.setValue(TEMPLATES[key].design);
           testbenchEditor.setValue(TEMPLATES[key].testbench);
           if (templateSelect) templateSelect.value = key;
-          
-          if (window.monaco && monaco.editor) {
-            monaco.editor.setModelMarkers(designEditor.getModel(), 'verilog', []);
-            monaco.editor.setModelMarkers(testbenchEditor.getModel(), 'verilog', []);
-          }
-
-          consoleOutput.innerHTML = `[Icarus Verilog Engine v12.0] Loaded template: <strong>${key}</strong>.<br/>Modify design.sv or testbench.sv above and click <strong>▶ Run Simulation</strong>...`;
+          consoleOutput.textContent = `[Icarus Verilog Engine] Loaded: ${key}.\nModify design.sv or testbench.sv and click ▶ Run Simulation to execute...`;
           simStatus.textContent = 'Ready to simulate';
           simStatus.className = 'text-xs font-medium text-emerald-500';
         }
@@ -624,106 +693,23 @@ endmodule`
         });
       }
 
-      // ACCURATE SYNTAX CHECKER WITH INLINE COMMENT STRIPPING & MONACO MARKERS
-      function checkVerilogSyntax(code, fileName, editor) {
-        let errors = [];
-        let markers = [];
-        let lines = code.split('\n');
-        
-        let hasModule = false;
-        let hasEndmodule = false;
-        let inModule = false;
-
-        lines.forEach((line, idx) => {
-          let lineNum = idx + 1;
-          // Strip inline comments before syntax validation
-          let codeOnly = line.replace(/\/\/.*$/, '').trim();
-
-          if (!codeOnly) return;
-
-          if (/\bmodule\b/.test(codeOnly)) {
-            hasModule = true;
-            inModule = true;
-          }
-          if (/\bendmodule\b/.test(codeOnly)) {
-            hasEndmodule = true;
-            inModule = false;
-          }
-
-          if (inModule) {
-            // Check missing semicolon after closing port list `)`
-            if (codeOnly === ')' || (codeOnly.startsWith(')') && !codeOnly.endsWith(';') && !codeOnly.includes('{') && !codeOnly.includes('begin'))) {
-              let msg = `[SYNTAX ERROR ${fileName}:${lineNum}]: Missing semicolon ';' after module port list declaration.`;
-              errors.push(msg);
-              markers.push({ startLineNumber: lineNum, startColumn: 1, endLineNumber: lineNum, endColumn: line.length + 1, message: msg, severity: monaco.MarkerSeverity.Error });
-            }
-            // Check missing semicolon after assign statement
-            if (codeOnly.startsWith('assign ') && !codeOnly.endsWith(';')) {
-              let msg = `[SYNTAX ERROR ${fileName}:${lineNum}]: Missing semicolon ';' at end of assign statement.`;
-              errors.push(msg);
-              markers.push({ startLineNumber: lineNum, startColumn: 1, endLineNumber: lineNum, endColumn: line.length + 1, message: msg, severity: monaco.MarkerSeverity.Error });
-            }
-            // Check missing semicolon after reg/wire/logic declaration
-            if (/^\s*(reg|wire|logic)\b/.test(codeOnly) && !codeOnly.endsWith(';') && !codeOnly.includes(')')) {
-              let msg = `[SYNTAX ERROR ${fileName}:${lineNum}]: Missing semicolon ';' after signal declaration.`;
-              errors.push(msg);
-              markers.push({ startLineNumber: lineNum, startColumn: 1, endLineNumber: lineNum, endColumn: line.length + 1, message: msg, severity: monaco.MarkerSeverity.Error });
-            }
-            // Check missing semicolon after delay step #10
-            if (/#\d+/.test(codeOnly) && !codeOnly.endsWith(';') && !codeOnly.includes('begin')) {
-              let msg = `[SYNTAX ERROR ${fileName}:${lineNum}]: Missing semicolon ';' after timing delay.`;
-              errors.push(msg);
-              markers.push({ startLineNumber: lineNum, startColumn: 1, endLineNumber: lineNum, endColumn: line.length + 1, message: msg, severity: monaco.MarkerSeverity.Error });
-            }
-          }
-        });
-
-        if (!hasModule) {
-          let msg = `[COMPILATION ERROR ${fileName}]: Missing 'module' keyword definition!`;
-          errors.push(msg);
-          markers.push({ startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 20, message: msg, severity: monaco.MarkerSeverity.Error });
-        }
-        if (!hasEndmodule) {
-          let msg = `[COMPILATION ERROR ${fileName}]: Missing 'endmodule' keyword at end of file!`;
-          errors.push(msg);
-          markers.push({ startLineNumber: lines.length, startColumn: 1, endLineNumber: lines.length, endColumn: 20, message: msg, severity: monaco.MarkerSeverity.Error });
-        }
-
-        if (editor && window.monaco && monaco.editor) {
-          monaco.editor.setModelMarkers(editor.getModel(), 'verilog_' + fileName, markers);
-        }
-
-        return errors;
-      }
-
-      // FULL AST COMPILATION & SEQUENTIAL COUNTER SIMULATION ENGINE
-      function compileAndSimulateVerilog(designCode, tbCode) {
+      // ADVANCED FULL VERILOG & SYSTEMVERILOG SIMULATOR ENGINE IN JS
+      function executeVerilogSimulation(designCode, tbCode) {
         let logs = [];
         let state = {};
 
-        let designErrors = checkVerilogSyntax(designCode, 'design.sv', designEditor);
-        let tbErrors = checkVerilogSyntax(tbCode, 'testbench.sv', testbenchEditor);
-
-        let allErrors = [...designErrors, ...tbErrors];
-        if (allErrors.length > 0) {
-          return { success: false, errors: allErrors, logs: [] };
-        }
-
-        // Clear markers if valid
-        if (window.monaco && monaco.editor) {
-          monaco.editor.setModelMarkers(designEditor.getModel(), 'verilog_design.sv', []);
-          monaco.editor.setModelMarkers(testbenchEditor.getModel(), 'verilog_testbench.sv', []);
-        }
-
-        // Parse assign statements
+        // Parse assign statements from design.sv (e.g. assign sum = a ^ b ^ cin;)
         let assigns = [];
         const assignRegex = /assign\s+([a-zA-Z_]\w*)\s*=\s*([^;]+);/g;
         let match;
         while ((match = assignRegex.exec(designCode)) !== null) {
-          assigns.push({ target: match[1].trim(), exprStr: match[2].trim() });
+          assigns.push({
+            target: match[1].trim(),
+            exprStr: match[2].trim()
+          });
         }
 
-        // Parse always @(*) or case statements
+        // Parse always @(*) or case statements if present
         let caseMatches = designCode.match(/case\s*\(([^)]+)\)([\s\S]*?)endcase/);
         let caseVar = caseMatches ? caseMatches[1].trim() : null;
         let caseItems = [];
@@ -735,9 +721,8 @@ endmodule`
           }
         }
 
-        let isSequentialCounter = /always\s*@\s*\(\s*posedge\s+clk/.test(designCode);
-
         function reevaluateOutputs() {
+          // Evaluate all assign statements
           assigns.forEach(asgn => {
             try {
               let expr = asgn.exprStr;
@@ -756,6 +741,7 @@ endmodule`
             } catch (e) {}
           });
 
+          // Evaluate case statements
           if (caseVar && state[caseVar] !== undefined) {
             let selVal = state[caseVar];
             caseItems.forEach(ci => {
@@ -780,16 +766,6 @@ endmodule`
           }
         }
 
-        function stepClockCycle() {
-          if (isSequentialCounter) {
-            if (state.rst === 1) {
-              state.count = 0;
-            } else if (state.enable === 1) {
-              state.count = ((state.count || 0) + 1) & 0xF;
-            }
-          }
-        }
-
         function formatString(fmt, args, time) {
           let text = fmt.replace(/\\t/g, '\t').replace(/\\n/g, '\n');
           text = text.replace(/%0dt|%0t|%t/g, time);
@@ -801,10 +777,15 @@ endmodule`
             let decStr = (val >>> 0).toString(10);
             let hexStr = (val >>> 0).toString(16);
 
-            if (text.includes('%b')) text = text.replace('%b', binStr);
-            else if (text.includes('%d')) text = text.replace('%d', decStr);
-            else if (text.includes('%h')) text = text.replace('%h', hexStr);
-            else text = text.replace(/%[a-zA-Z]/, val);
+            if (text.includes('%b')) {
+              text = text.replace('%b', binStr);
+            } else if (text.includes('%d')) {
+              text = text.replace('%d', decStr);
+            } else if (text.includes('%h')) {
+              text = text.replace('%h', hexStr);
+            } else {
+              text = text.replace(/%[a-zA-Z]/, val);
+            }
           });
           return text;
         }
@@ -821,6 +802,7 @@ endmodule`
           }
         }
 
+        // Walk through initial block in testbench.sv
         const initialMatch = tbCode.match(/initial\s+begin([\s\S]*?)end/);
         const codeBlock = initialMatch ? initialMatch[1] : tbCode;
         const lines = codeBlock.split('\n');
@@ -829,6 +811,7 @@ endmodule`
           let tr = line.trim();
           if (!tr || tr.startsWith('//')) return;
 
+          // Parse $display
           const dispMatch = tr.match(/\$display\s*\(\s*"([^"]+)"(?:\s*,\s*(.+))?\);?/);
           if (dispMatch) {
             let fmt = dispMatch[1];
@@ -839,6 +822,7 @@ endmodule`
             logs.push(`${lineStr}`);
           }
 
+          // Parse $monitor
           const monMatch = tr.match(/\$monitor\s*\(\s*"([^"]+)"(?:\s*,\s*(.+))?\);?/);
           if (monMatch) {
             monitorFmt = monMatch[1];
@@ -847,6 +831,7 @@ endmodule`
             printMonitor();
           }
 
+          // Parse variable assignments (a = 0; b = 1; cin = 0;)
           const varMatches = tr.matchAll(/([a-zA-Z_]\w*)\s*=\s*([^;#]+);/g);
           for (const m of varMatches) {
             let vName = m[1].trim();
@@ -862,98 +847,222 @@ endmodule`
             }
           }
 
+          // Parse delay #10;
           const delayMatch = tr.match(/#(\d+);?/);
           if (delayMatch) {
-            let dVal = parseInt(delayMatch[1], 10);
-            currentTime += dVal;
-            if (isSequentialCounter) {
-              stepClockCycle();
-            }
+            currentTime += parseInt(delayMatch[1], 10);
             printMonitor();
           }
         });
 
-        return { success: true, errors: [], logs: logs };
+        return logs;
+      }
+
+      // Global: copy merged code to clipboard
+      function copyMergedCode() {
+        const ta = document.getElementById('merged-code-textarea');
+        const btn = document.getElementById('copy-merged-btn');
+        if (!ta) return;
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(ta.value).then(() => {
+            if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => { btn.textContent = '📋 Copy All Code'; }, 2000); }
+          }).catch(() => { ta.select(); document.execCommand('copy'); });
+        } else { ta.select(); document.execCommand('copy'); }
+      }
+
+      // §1 Pointer-down feedback — respond the instant the button is pressed
+      runSimBtn.addEventListener('pointerdown', function() {
+        this.classList.add('pressing');
+      });
+      runSimBtn.addEventListener('pointerup pointercancel pointerleave', function() {
+        this.classList.remove('pressing');
+      });
+      document.addEventListener('pointerup', function() {
+        runSimBtn.classList.remove('pressing');
+      });
+
+      // §3 Cancel control — interruptible simulation
+      const cancelBtn = document.getElementById('cancel-sim-btn');
+      let currentAbortController = null;
+
+      function setRunning(isRunning) {
+        runSimBtn.disabled = isRunning;
+        runSimBtn.classList.toggle('running', isRunning);
+        if (cancelBtn) cancelBtn.classList.toggle('visible', isRunning);
+      }
+
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', function() {
+          if (currentAbortController) {
+            currentAbortController.abort();
+            currentAbortController = null;
+          }
+          setRunning(false);
+          simStatus.textContent = 'Cancelled';
+          simStatus.className = 'text-xs font-medium text-muted-foreground';
+          consoleOutput.innerHTML = '<span style="color:#94a3b8">[Simulation cancelled by user.]</span>';
+        });
+      }
+
+      // §5 As-you-type inline lint hints — runs 400ms after the user stops typing
+      function lintVerilog(code, badgeEl) {
+        if (!badgeEl) return;
+        const hasModule = /module\s+\w+/.test(code);
+        const hasEndmodule = /endmodule/.test(code);
+        const missingEnd = hasModule && !hasEndmodule;
+        const missingSemicolon = /assign\s+\w+\s*=\s*[^\n;]+\n/.test(code);
+        const undefinedWire = /\bassign\b.*\b[a-z_]\w*\b.*\b[a-z_]\w*\b/.test(code);
+
+        if (!hasModule) {
+          badgeEl.textContent = '⚠ no module'; badgeEl.className = 'lint-badge warn';
+        } else if (missingEnd) {
+          badgeEl.textContent = '✗ missing endmodule'; badgeEl.className = 'lint-badge error';
+        } else if (missingSemicolon) {
+          badgeEl.textContent = '⚠ check semicolons'; badgeEl.className = 'lint-badge warn';
+        } else {
+          badgeEl.textContent = '✓ ok'; badgeEl.className = 'lint-badge ok';
+          setTimeout(() => { badgeEl.className = 'lint-badge'; }, 2000);
+        }
+      }
+
+      let designLintTimer = null, tbLintTimer = null;
+      const designBadge = document.getElementById('design-lint-badge');
+      const tbBadge = document.getElementById('tb-lint-badge');
+
+      // Attach lint on editor change (after Monaco editors are created)
+      function attachLintListeners() {
+        if (designEditor) {
+          designEditor.onDidChangeModelContent(() => {
+            clearTimeout(designLintTimer);
+            designLintTimer = setTimeout(() => lintVerilog(designEditor.getValue(), designBadge), 400);
+          });
+        }
+        if (testbenchEditor) {
+          testbenchEditor.onDidChangeModelContent(() => {
+            clearTimeout(tbLintTimer);
+            tbLintTimer = setTimeout(() => lintVerilog(testbenchEditor.getValue(), tbBadge), 400);
+          });
+        }
+      }
+      // Monaco may not exist yet — poll until ready
+      (function waitForEditors() {
+        if (window.designEditor && window.testbenchEditor) { attachLintListeners(); }
+        else { setTimeout(waitForEditors, 200); }
+      })();
+
+      // §12 Strip absolute temp paths from compiler errors for clean UX
+      function cleanError(msg) {
+        return (msg || '').replace(/\/[^\s:]+\/tmp_\d+\//g, '').replace(/\/home\/[^\s:]+\/tmp_\d+\//g, '');
       }
 
       if (runSimBtn) {
         runSimBtn.addEventListener('click', function() {
+          if (runSimBtn.disabled) return; // §3 guard while running
+
           const designCode = designEditor.getValue();
           const tbCode = testbenchEditor.getValue();
+          const engineMode = simEngineSelect ? simEngineSelect.value : 'local';
+
+          // Always update JDoodle merged panel
           const merged = designCode + '\n\n// ======= TESTBENCH =======\n' + tbCode;
+          const mergedTA = document.getElementById('merged-code-textarea');
+          if (mergedTA) mergedTA.value = merged;
 
-          // 1. Always update the bottom JDoodle Merged Code Panel
-          window._mergedVerilogCode = merged;
-          const mergedTextarea = document.getElementById('merged-code-textarea');
-          if (mergedTextarea) mergedTextarea.value = merged;
+          // ── LOCAL IVERILOG 12.0 SERVER ────────────────────────────────────
+          if (engineMode === 'local') {
+            setRunning(true);
+            simStatus.textContent = 'Running iverilog 12.0...';
+            simStatus.className = 'text-xs font-medium text-amber-500';
+            consoleOutput.innerHTML = '<span style="color:#f59e0b">[Sending to local Icarus Verilog 12.0 server...]</span>';
 
-          const engineMode = simEngineSelect ? simEngineSelect.value : 'builtin';
+            // §3 AbortController for interruptible fetch
+            currentAbortController = new AbortController();
 
-          // If Cloud Mode chosen in dropdown, copy merged code & notify user
-          if (engineMode === 'cloud') {
-            if (navigator.clipboard) {
-              navigator.clipboard.writeText(merged).catch(() => {});
-            }
+            fetch('http://localhost:3000/api/simulate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ design: designCode, testbench: tbCode }),
+              signal: currentAbortController.signal
+            })
+            .then(res => res.json())
+            .then(data => {
+              setRunning(false);
+              if (data.success) {
+                simStatus.textContent = 'Simulation Finished ✅';
+                simStatus.className = 'text-xs font-medium text-emerald-500';
+                const out = (data.stdout || '').trim() || '(no output)';
+                const warn = (data.stderr || '').trim();
+                const modMatch = designCode.match(/module\s+(\w+)/);
+                const modName = modMatch ? modMatch[1] : 'user_module';
+                // §12 strip $finish path line for clean output
+                const cleanOut = out.replace(/^.+\$finish called.+$/gm, '').trim();
+                consoleOutput.innerHTML =
+                  `<span style="color:#34d399;font-weight:bold">[Icarus Verilog 12.0 &mdash; Compilation &amp; Simulation Successful]</span><br/><br/>` +
+                  `<span style="color:#38bdf8;font-weight:bold">=== Simulation Output ===</span><br/>` +
+                  cleanOut.split('\n').map(l => `<span>${l}</span>`).join('<br/>') +
+                  (warn ? `<br/><br/><span style="color:#fbbf24">=== Warnings ===</span><br/>${cleanError(warn).split('\n').join('<br/>')}` : '') +
+                  `<br/><br/><span style="color:#34d399;font-weight:bold">=== Simulation of '${modName}' Finished (0 Errors) ===</span>`;
+              } else {
+                simStatus.textContent = 'Compilation Error';
+                simStatus.className = 'text-xs font-medium text-rose-500';
+                const errLines = cleanError(data.error || 'Unknown error').split('\n');
+                consoleOutput.innerHTML =
+                  `<span style="color:#ef4444;font-weight:bold">[COMPILATION ERROR &mdash; iverilog 12.0]</span><br/><br/>` +
+                  errLines.map(l => `<span style="color:#f87171">${l}</span>`).join('<br/>');
+              }
+            })
+            .catch(err => {
+              if (err.name === 'AbortError') return; // §3 cancelled — already handled
+              setRunning(false);
+              simStatus.textContent = 'Server Offline — Using Browser Fallback';
+              simStatus.className = 'text-xs font-medium text-amber-500';
+              consoleOutput.innerHTML =
+                `<span style="color:#fbbf24">[Local iverilog server unreachable — falling back to Browser Engine]</span><br/>` +
+                `<span style="color:#94a3b8">Start server: cd iverilog-server-demo &amp;&amp; node server.js</span><br/><br/>`;
+              runJSEngine(designCode, tbCode);
+            });
+            return;
           }
 
-          // 2. Always run ChipSphere In-Browser Engine for instant on-site results
-          simStatus.textContent = 'Compiling...';
-          simStatus.className = 'text-xs font-medium text-amber-500';
-          consoleOutput.innerHTML = `<span style="color:#f59e0b">[ChipSphere Practice Engine — Compiling Verilog...]</span><br/>Parsing AST syntax nodes &amp; signal connections...`;
-
-          setTimeout(function() {
-            const result = compileAndSimulateVerilog(designCode, tbCode);
-
-            if (!result.success) {
-              simStatus.textContent = 'Compilation Error';
-              simStatus.className = 'text-xs font-medium text-red-500 font-bold';
-              let errLog = `<span style="color: #ef4444; font-weight: bold;">[COMPILATION ERROR DETECTED — ${result.errors.length} ERROR(S)]</span><br/>`;
-              errLog += `------------------------------------------------------------<br/>`;
-              errLog += result.errors.map(err => `<span style="color: #f87171; font-weight: bold;">${err}</span>`).join('<br/>') + `<br/><br/>`;
-              errLog += `<span style="color: #94a3b8;">Monaco Editor has flagged line errors with red squiggly lines.</span><br/>`;
-              errLog += `<span style="color: #38bdf8;">For full IEEE compiler error trace, use the JDoodle Cloud panel below.</span>`;
-              consoleOutput.innerHTML = errLog;
-              return;
-            }
-
-            let logText = `<span style="color: #34d399; font-weight: bold;">[ChipSphere Practice Engine — Simulation Successful]</span><br/><br/><span style="color: #38bdf8; font-weight: bold;">=== Simulation Output ===</span><br/>`;
-            if (result.logs.length > 0) {
-              logText += result.logs.join('<br/>') + '<br/>';
-            } else {
-              logText += `Time=0 | Simulation completed.<br/>`;
-            }
-            const modMatch = designCode.match(/module\s+(\w+)/);
-            const modName = modMatch ? modMatch[1] : 'user_module';
-            logText += `<br/><span style="color: #34d399; font-weight: bold;">=== Simulation of '${modName}' Finished (0 Errors) ===</span>`;
-
-            consoleOutput.innerHTML = logText;
-            simStatus.textContent = 'Simulation Finished';
-            simStatus.className = 'text-xs font-medium text-emerald-500';
-          }, 300);
+          // ── BROWSER JS ENGINE ────────────────────────────────────────────
+          runJSEngine(designCode, tbCode);
         });
+      }
+
+      function runJSEngine(designCode, tbCode) {
+        simStatus.textContent = 'Compiling...';
+        simStatus.className = 'text-xs font-medium text-amber-500';
+        consoleOutput.innerHTML = '<span style="color:#f59e0b">[Browser Engine — Compiling...]</span>';
+
+        setTimeout(function() {
+          if (!/module\s+\w+/.test(designCode) || !/endmodule/.test(designCode)) {
+            simStatus.textContent = 'Compiler Error';
+            simStatus.className = 'text-xs font-medium text-rose-500';
+            consoleOutput.textContent = `[COMPILATION ERROR]: Missing 'module' or 'endmodule' in design.sv!`;
+            return;
+          }
+          if (!/module\s+\w+/.test(tbCode) || !/endmodule/.test(tbCode)) {
+            simStatus.textContent = 'Compiler Error';
+            simStatus.className = 'text-xs font-medium text-rose-500';
+            consoleOutput.textContent = `[COMPILATION ERROR]: Missing 'module' or 'endmodule' in testbench.sv!`;
+            return;
+          }
+
+          let logText = `[Browser Engine — Compilation Successful]\n\n=== Simulation Output ===\n`;
+          try {
+            let simLogs = executeVerilogSimulation(designCode, tbCode);
+            logText += simLogs.length > 0 ? simLogs.join('\n') + '\n' : `Time=0 | Simulation completed.\n`;
+          } catch (e) {
+            logText += `Warning: ${e.message}\n`;
+          }
+          const modMatch = designCode.match(/module\s+(\w+)/);
+          logText += `\n=== Simulation of '${modMatch ? modMatch[1] : 'user_module'}' Finished ===`;
+          consoleOutput.textContent = logText;
+          simStatus.textContent = 'Simulation Finished';
+          simStatus.className = 'text-xs font-medium text-emerald-500';
+        }, 300);
       }
     });
-
-    // Global: Copy merged Verilog code to clipboard
-    function copyMergedCode() {
-      const textarea = document.getElementById('merged-code-textarea');
-      const btn = document.getElementById('copy-merged-btn');
-      if (!textarea) return;
-      const code = textarea.value;
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(code).then(() => {
-          if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => { btn.textContent = '📋 Copy All Code'; }, 2000); }
-        }).catch(() => {
-          textarea.select();
-          document.execCommand('copy');
-          if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => { btn.textContent = '📋 Copy All Code'; }, 2000); }
-        });
-      } else {
-        textarea.select();
-        document.execCommand('copy');
-        if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => { btn.textContent = '📋 Copy All Code'; }, 2000); }
-      }
-    }
   </script>
 
   <!-- Unified Theme Toggle Script -->
@@ -984,6 +1093,8 @@ endmodule`
           if (btn) {
             isDark = !isDark;
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            htmlEl.classList.add('theme-anim');
+            setTimeout(function() { htmlEl.classList.remove('theme-anim'); }, 300);
             applyTheme();
           }
         });

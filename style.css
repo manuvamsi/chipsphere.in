@@ -27,3 +27,56 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+/* --- FLUID INTERFACE FOUNDATIONS --- */
+
+/* Pressed feedback: respond on pointer-down, not only hover */
+button:active,
+a[class*="rounded"]:active {
+  transform: scale(0.97);
+}
+
+/* Theme cross-fade — applied transiently by the toggle script */
+html.theme-anim,
+html.theme-anim *,
+html.theme-anim *::before,
+html.theme-anim *::after {
+  transition: background-color 250ms ease, color 250ms ease,
+    border-color 250ms ease, fill 250ms ease, stroke 250ms ease !important;
+}
+
+/* Reduced motion: gentle equivalents instead of movement */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  button:active,
+  a[class*="rounded"]:active {
+    transform: none;
+  }
+}
+
+/* Reduced transparency: translucent chrome becomes solid */
+@media (prefers-reduced-transparency: reduce) {
+  header.sticky,
+  .backdrop-blur-md {
+    background: var(--background) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* Increased contrast: solid surfaces, defined edges */
+@media (prefers-contrast: more) {
+  header.sticky {
+    background: var(--background) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+}
