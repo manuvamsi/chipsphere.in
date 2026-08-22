@@ -858,16 +858,45 @@ endmodule`
         return logs;
       }
 
-      // Global: copy merged code to clipboard
-      function copyMergedCode() {
+      // Global: copy merged code to clipboard (attached to window for inline onclick)
+      window.copyMergedCode = function copyMergedCode() {
         const ta = document.getElementById('merged-code-textarea');
         const btn = document.getElementById('copy-merged-btn');
         if (!ta) return;
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(ta.value).then(() => {
-            if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => { btn.textContent = '📋 Copy All Code'; }, 2000); }
-          }).catch(() => { ta.select(); document.execCommand('copy'); });
-        } else { ta.select(); document.execCommand('copy'); }
+
+        // Auto-populate merged code from editors if available
+        if (designEditor && testbenchEditor) {
+          const designCode = designEditor.getValue();
+          const tbCode = testbenchEditor.getValue();
+          ta.value = designCode + '\n\n// ======= TESTBENCH =======\n' + tbCode;
+        }
+
+        const textToCopy = ta.value;
+        if (!textToCopy) return;
+
+        function showCopiedFeedback() {
+          if (btn) {
+            btn.textContent = '✅ Copied!';
+            setTimeout(() => { btn.textContent = '📋 Copy All Code'; }, 2000);
+          }
+        }
+
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(textToCopy).then(showCopiedFeedback).catch(() => {
+            ta.select();
+            document.execCommand('copy');
+            showCopiedFeedback();
+          });
+        } else {
+          ta.select();
+          document.execCommand('copy');
+          showCopiedFeedback();
+        }
+      };
+
+      const copyBtn = document.getElementById('copy-merged-btn');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', window.copyMergedCode);
       }
 
       // §1 Pointer-down feedback — respond the instant the button is pressed
